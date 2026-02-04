@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="theme-color" content="#0b0f14" />
+  <title>Macmillan Darts Tracker</title>
+
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <!-- CELEBRATION OVERLAY -->
+  <div id="celebrateOverlay" class="celebrate hidden" aria-hidden="true">
+    <div class="celebrateCard" role="dialog" aria-modal="true" aria-labelledby="celebrateTitle">
+      <div class="celebrateEmoji">🎉</div>
+      <h2 id="celebrateTitle">Target Achieved!</h2>
+      <p>
+        Congratulations!<br />
+        Thank you for supporting<br />
+        <b>Macmillan Cancer Support</b>
+      </p>
+
+      <div class="celebrateActions">
+        <button id="closeCelebrate" class="primary" type="button">Close</button>
+        <button id="resetCelebrate" type="button">Reset score</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="wrap">
+
+    <!-- HEADER / BRANDING -->
+    <header class="title branded">
+      <div class="brandLeft">
+        <img src="macmillan.png" alt="Macmillan Cancer Support" class="logo logo-mac" />
+        <div>
+          <h1>Macmillan Darts</h1>
+          <p class="sub">12 hours · 100,000 points · Charity event</p>
+        </div>
+      </div>
+
+      <div class="brandRight">
+        <button class="ghost" id="bigModeBtn" type="button">Big screen: Off</button>
+      </div>
+    </header>
+
+    <main class="grid">
+      <!-- MAIN TRACKING CARD -->
+      <section class="card" id="mainCard">
+        <div class="heroRow">
+          <div class="heroStat">
+            <div class="label">Points remaining</div>
+            <div class="value hero" id="remaining">100,000</div>
+            <div class="sub mono" id="targetLabel">Target: 100,000</div>
+          </div>
+
+          <div class="heroStat">
+            <div class="label">Time remaining</div>
+            <div class="value hero mono" id="timeLeft">—</div>
+            <div class="sub mono" id="endsAt">Timer not started</div>
+          </div>
+        </div>
+
+        <div class="spacer"></div>
+
+        <div class="secondaryRow">
+          <div class="stat compact">
+            <div class="label">Total points</div>
+            <div class="value" id="total">0</div>
+          </div>
+
+          <div class="stat compact">
+            <div class="label">Progress</div>
+            <div class="barOuter">
+              <div class="barInner" id="bar"></div>
+            </div>
+            <div class="row spread">
+              <div class="sub mono" id="pct">0.0%</div>
+              <div class="sub mono">towards target</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="spacer bigHide"></div>
+
+        <!-- INPUT CONTROLS (hidden in big screen mode via CSS) -->
+        <div class="row bigHide">
+          <input id="scoreInput" type="number" inputmode="numeric" min="0" step="1" placeholder="Score (e.g. 60)" />
+          <button class="primary" id="addBtn" type="button">+ Add</button>
+          <button class="danger" id="subBtn" type="button">− Subtract</button>
+          <button class="warn" id="undoBtn" type="button">Undo</button>
+        </div>
+
+        <!-- QUICK ENTRY BUTTONS -->
+        <div class="quick bigHide">
+          <button class="chip" data-add="26" type="button">+26</button>
+          <button class="chip" data-add="41" type="button">+41</button>
+          <button class="chip" data-add="45" type="button">+45</button>
+          <button class="chip" data-add="60" type="button">+60</button>
+          <button class="chip" data-add="85" type="button">+85</button>
+          <button class="chip" data-add="100" type="button">+100</button>
+          <button class="chip" data-add="140" type="button">+140</button>
+          <button class="chip" data-add="180" type="button">+180</button>
+          <button class="chip" data-add="301" type="button">+301</button>
+          <button class="chip" data-add="501" type="button">+501</button>
+        </div>
+
+        <p class="note bigHide">
+          Charity event for <b>Macmillan Cancer Support</b>. Chalk carefully. Undo safely.
+        </p>
+      </section>
+
+      <!-- SETTINGS / CONTROLS (hidden in big screen mode) -->
+      <section class="card bigHide" id="settingsCard">
+        <button id="settingsToggle" class="settingsHeader" type="button" aria-expanded="false">
+          <div>
+            <div class="label">Event settings</div>
+            <div class="sub">Tap to expand/collapse</div>
+          </div>
+          <div class="chev" aria-hidden="true">⌄</div>
+        </button>
+
+        <div id="settingsBody" class="settingsBody collapsed">
+          <div class="row spread">
+            <div>
+              <div class="sub">Stored on this device (offline safe)</div>
+            </div>
+            <div class="row">
+              <button id="resetBtn" type="button">Reset score</button>
+              <button id="wipeBtn" type="button">Wipe all</button>
+            </div>
+          </div>
+
+          <div class="spacer"></div>
+
+          <div class="row">
+            <div class="field">
+              <div class="label">Target points</div>
+              <input id="targetInput" type="number" inputmode="numeric" min="1" step="1" />
+            </div>
+            <div class="field">
+              <div class="label">Hours</div>
+              <input id="hoursInput" type="number" inputmode="numeric" min="1" step="1" />
+            </div>
+          </div>
+
+          <div class="spacer"></div>
+
+          <div class="row">
+            <button class="primary" id="startBtn" type="button">Start / Resume</button>
+            <button id="stopBtn" type="button">Pause</button>
+            <button id="resetTimerBtn" type="button">Reset timer</button>
+          </div>
+
+          <div class="spacer"></div>
+
+          <div class="label">Recent entries</div>
+          <div class="history" id="history"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+  <script>
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("./sw.js").catch(() => {});
+    }
+  </script>
+</body>
+</html>
