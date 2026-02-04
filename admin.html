@@ -52,20 +52,20 @@
   <details class="admin-settings">
     <summary>Admin settings</summary>
 
-    <div class="grid">
+    <div class="grid" style="margin-top:1.5rem">
 
       <section class="card">
         <div class="label">Event setup</div>
-        <div class="row">
+        <div class="row" style="margin-bottom:0.75rem">
           <input id="targetInput" type="number" placeholder="Target points" />
           <input id="durationInput" type="number" placeholder="Hours" />
         </div>
-        <button class="primary full" id="saveSettings">Save</button>
+        <button class="primary full" id="saveSettings">Save settings</button>
       </section>
 
       <section class="card">
         <div class="label">Amount raised (£)</div>
-        <div class="row">
+        <div class="row" style="margin-bottom:0.75rem">
           <input id="amountInput" type="number" placeholder="e.g. 7500" />
         </div>
         <button class="primary full" id="saveAmount">Update amount</button>
@@ -76,7 +76,7 @@
         <div class="row">
           <button class="chip" id="startBtn">Start</button>
           <button class="chip" id="pauseBtn">Pause</button>
-          <button class="chip" id="resetTimerBtn">Reset</button>
+          <button class="chip" id="resetTimerBtn">Reset timer</button>
         </div>
       </section>
 
@@ -110,25 +110,28 @@ async function add(delta) {
   }).eq("id", EVENT_ID);
 }
 
-async function undo() {
-  if (!state.last_delta) return alert("Nothing to undo");
-  if (!confirm(`Undo last entry (${state.last_delta})?`)) return;
+async function resetPoints() {
+  if (!confirm("Reset ALL points to zero?")) return;
   await supabase.from("events").update({
-    total: Math.max(0, state.total - state.last_delta),
+    total: 0,
     last_delta: 0
   }).eq("id", EVENT_ID);
 }
 
-saveSettings.onclick = () =>
-  supabase.from("events").update({
+resetPointsBtn.onclick = resetPoints;
+
+saveSettings.onclick = async () => {
+  await supabase.from("events").update({
     target: Number(targetInput.value),
     duration_minutes: Number(durationInput.value) * 60
   }).eq("id", EVENT_ID);
+};
 
-saveAmount.onclick = () =>
-  supabase.from("events").update({
+saveAmount.onclick = async () => {
+  await supabase.from("events").update({
     amount_raised: Number(amountInput.value)
   }).eq("id", EVENT_ID);
+};
 
 startBtn.onclick = () =>
   supabase.from("events").update({
@@ -143,24 +146,20 @@ pauseBtn.onclick = () =>
     is_running: false
   }).eq("id", EVENT_ID);
 
-resetTimerBtn.onclick = () => confirm("Reset timer?") &&
+resetTimerBtn.onclick = () =>
+  confirm("Reset timer?") &&
   supabase.from("events").update({
     started_at: null,
     paused_at: null,
     is_running: false
   }).eq("id", EVENT_ID);
 
-resetPointsBtn.onclick = () => confirm("Reset all points?") &&
-  supabase.from("events").update({
-    total: 0,
-    last_delta: 0
-  }).eq("id", EVENT_ID);
-
 document.querySelectorAll("[data-add]").forEach(b =>
   b.onclick = () => add(Number(b.dataset.add))
 );
+
 addManual.onclick = () => manual.value && add(Number(manual.value));
-undoBtn.onclick = undo;
+undoBtn.onclick = () => confirm("Undo last entry?") && add(-state.last_delta);
 
 supabase.channel("events")
   .on("postgres_changes", { event: "UPDATE", table: "events" }, p => {
