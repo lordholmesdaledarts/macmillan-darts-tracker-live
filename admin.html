@@ -124,6 +124,9 @@
 <script type="module">
 import { supabase, EVENT_ID } from "./supabase.js";
 
+/* 🔍 DEBUG: confirm which event Admin is writing to */
+console.log("ADMIN EVENT_ID:", EVENT_ID);
+
 let state = null;
 
 /* ---------- Load ---------- */
@@ -204,8 +207,6 @@ async function pauseTimer() {
 
 async function resetTimerHandler() {
   if (!confirm("Reset the timer back to the full duration?")) return;
-
-  // Only rely on started_at; display should derive countdown from started_at + duration
   await updateEvent({ started_at: null });
 }
 
@@ -216,10 +217,7 @@ async function resetPoints() {
 
 async function saveAmount() {
   const value = Number(amountInput.value || 0);
-
-  await updateEvent({
-    amount_raised: value
-  });
+  await updateEvent({ amount_raised: value });
 }
 
 /* ---------- Wiring ---------- */
@@ -242,14 +240,12 @@ saveAmount.onclick = saveAmount;
 
 /* ---------- Realtime sync ---------- */
 supabase
-  .channel("events")
+  .channel("events-admin")
   .on(
     "postgres_changes",
     { event: "UPDATE", schema: "public", table: "events" },
     p => {
       state = p.new;
-
-      // Keep admin UI fully in sync with database
       total.textContent = Number(state.total || 0).toLocaleString();
       amountInput.value = state.amount_raised ?? "";
     }
