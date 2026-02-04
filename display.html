@@ -1,97 +1,39 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Macmillan Cancer Support – Darts Marathon</title>
-  <link rel="stylesheet" href="styles.css" />
+  <meta charset="utf-8">
+  <title>Macmillan Darts – Display</title>
+  <link rel="stylesheet" href="styles.css">
 </head>
 
-<body class="big display">
+<body class="display">
+<div class="wrap">
 
-<main class="display-grid">
+  <div class="display-grid">
 
-  <section class="hero-box">
-    <div class="label">Points remaining</div>
-    <div class="hero-value mono" id="pointsRemaining">—</div>
-    <div class="sub-value mono">
-      Total scored: <span id="pointsTotal">0</span>
+    <div class="hero-card">
+      <div class="label">Points remaining</div>
+      <div class="hero-value mono" id="pointsRemaining">—</div>
+      <div class="subtle">Total scored: <span id="pointsTotal">0</span></div>
+      <div class="progress">
+        <div class="bar" id="bar"></div>
+      </div>
     </div>
-  </section>
 
-  <section class="hero-box">
-    <div class="label">Time remaining</div>
-    <div class="hero-value mono" id="timeRemaining">—</div>
-    <div class="sub-value">Until end of event</div>
-  </section>
+    <div class="hero-card">
+      <div class="label">Time remaining</div>
+      <div class="hero-value mono" id="timeRemaining">—</div>
+      <div class="subtle">Until end of event</div>
+    </div>
 
-</main>
-
-<footer class="display-footer">
-
-  <div class="raised">
-    Amount raised:
-    <strong>£<span id="amountRaised">0</span></strong>
   </div>
 
-  <div class="progress">
-    <div class="bar" id="progressBar"></div>
+  <div class="amount">
+    Amount raised: £<span id="amountRaised">0</span>
   </div>
 
-  <div style="text-align:center; opacity:0.9">
-    Progress to target:
-    <strong><span id="progressPct">0</span>%</strong>
-  </div>
+</div>
 
-</footer>
-
-<script type="module">
-import { supabase, EVENT_ID } from "./supabase.js";
-
-let state = null;
-
-function render() {
-  if (!state) return;
-
-  const remaining = Math.max(0, state.target - state.total);
-  pointsRemaining.textContent = remaining.toLocaleString();
-  pointsTotal.textContent = state.total.toLocaleString();
-
-  if (state.started_at) {
-    const start = new Date(state.started_at).getTime();
-    const durationMs = state.duration_minutes * 60000;
-    const remainingMs = Math.max(0, durationMs - (Date.now() - start));
-    const h = Math.floor(remainingMs / 3600000);
-    const m = Math.floor((remainingMs % 3600000) / 60000);
-    timeRemaining.textContent = `${h}h ${m}m`;
-  }
-
-  const raised = Number(state.amount_raised || 0);
-  amountRaised.textContent = raised.toLocaleString();
-
-  const pct = Math.min(100, Math.round((state.total / state.target) * 100));
-  progressPct.textContent = pct;
-  progressBar.style.width = pct + "%";
-}
-
-supabase.channel("events")
-  .on("postgres_changes", { event: "UPDATE", table: "events" }, p => {
-    state = p.new;
-    render();
-  })
-  .subscribe();
-
-setInterval(render, 1000);
-
-const { data } = await supabase
-  .from("events")
-  .select("*")
-  .eq("id", EVENT_ID)
-  .single();
-
-state = data;
-render();
-</script>
-
+<script type="module" src="app.js"></script>
 </body>
 </html>
