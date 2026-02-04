@@ -215,8 +215,10 @@ async function resetPoints() {
 }
 
 async function saveAmount() {
+  const value = Number(amountInput.value || 0);
+
   await updateEvent({
-    amount_raised: Number(amountInput.value || 0)
+    amount_raised: value
   });
 }
 
