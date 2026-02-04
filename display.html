@@ -18,37 +18,48 @@
       </p>
     </header>
 
-    <!-- Main hero area -->
-    <div class="display-grid">
-
-      <!-- Points -->
-      <section class="hero-card tall">
+    <!-- ROW 1: Primary -->
+    <div class="display-grid primary-grid">
+      <!-- Points remaining -->
+      <section class="hero-card">
         <div class="label">Points remaining</div>
         <div class="hero-value mono" id="pointsRemaining">—</div>
-
         <div class="subtle">
-          Total scored: <span id="pointsTotal">0</span>
-        </div>
-
-        <div class="progress-wrap">
-          <div class="progress-header">
-            <div class="progress-label">Progress</div>
-            <div class="progress-pct" id="progressPct">0%</div>
-          </div>
-
-          <div class="progress">
-            <div class="bar" id="bar"></div>
-          </div>
+          Target: <span id="targetPoints">0</span>
         </div>
       </section>
 
-      <!-- Time -->
-      <section class="hero-card tall">
+      <!-- Time remaining -->
+      <section class="hero-card">
         <div class="label">Time remaining</div>
         <div class="hero-value mono" id="timeRemaining">—</div>
         <div class="subtle">Until end of event</div>
       </section>
+    </div>
 
+    <!-- ROW 2: Secondary -->
+    <div class="display-grid secondary-grid">
+      <!-- Total points -->
+      <section class="card">
+        <div class="label">Total points scored</div>
+        <div class="secondary-value mono" id="pointsTotal">0</div>
+      </section>
+
+      <!-- Progress -->
+      <section class="card">
+        <div class="label">Progress to target</div>
+
+        <div class="progress-wrap">
+          <div class="progress-header">
+            <div class="progress-label">Completion</div>
+            <div class="progress-pct" id="progressPct">0%</div>
+          </div>
+
+          <div class="progress big">
+            <div class="bar" id="bar"></div>
+          </div>
+        </div>
+      </section>
     </div>
 
   </div>
@@ -58,7 +69,6 @@ import { supabase, EVENT_ID } from "./supabase.js";
 
 let state = null;
 
-/* ---------- Helpers ---------- */
 function num(v, fallback = 0) {
   const n = Number(v);
   return Number.isFinite(n) ? n : fallback;
@@ -76,7 +86,6 @@ function formatTimeHM(ms) {
   return `${h}h ${m}m`;
 }
 
-/* ---------- Render ---------- */
 function render() {
   if (!state) return;
 
@@ -85,6 +94,7 @@ function render() {
 
   // Points
   pointsTotal.textContent = total.toLocaleString();
+  targetPoints.textContent = target.toLocaleString();
   pointsRemaining.textContent = target
     ? Math.max(0, target - total).toLocaleString()
     : "—";
@@ -111,7 +121,6 @@ function render() {
   timeRemaining.textContent = formatTimeHM(remainingMs);
 }
 
-/* ---------- Initial load ---------- */
 async function load() {
   const { data, error } = await supabase
     .from("events")
@@ -120,7 +129,7 @@ async function load() {
     .single();
 
   if (error) {
-    alert("Display failed to load event: " + error.message);
+    alert(error.message);
     return;
   }
 
@@ -128,7 +137,6 @@ async function load() {
   render();
 }
 
-/* ---------- Realtime updates ---------- */
 supabase
   .channel("events-display")
   .on(
