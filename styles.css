@@ -269,3 +269,31 @@ header.title .sub {
   font-size: 0.95rem;
   opacity: 0.75;
 }
+/* ===== Admin layout spacing ===== */
+
+.admin-top {
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr;
+  gap: 1.75rem;
+  margin-top: 1.25rem;
+}
+
+.entry-wide {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 0.9rem;
+  align-items: center;
+  margin-top: 0.75rem;
+}
+
+.settings-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 1.75rem;           /* separates cards so they don’t blend */
+  margin-top: 1.25rem;
+}
+
+details.admin-settings summary {
+  margin-top: 1.5rem;
+  padding: 0.75rem 0;
+}
