@@ -1,11 +1,15 @@
-const CACHE = "macmillan-darts-v14";
+const CACHE = "macmillan-darts-v15";
 const ASSETS = [
   "./",
   "./index.html",
+  "./display.html",
+  "./admin.html",
   "./styles.css",
   "./app.js",
   "./manifest.webmanifest",
-  "./sw.js"
+  "./sw.js",
+  "./macmillan.png",
+  "./holmesdale.png"
 ];
 
 self.addEventListener("install", (event) => {
