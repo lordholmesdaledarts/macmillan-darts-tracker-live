@@ -184,7 +184,8 @@ async function undo() {
 async function saveTargets() {
   await updateEvent({
     target: Number(targetInput.value || 0),
-    duration_hours: Number(hoursInput.value || 0)
+    duration_hours: Number(hoursInput.value || 0),
+    started_at: null   // force display to show full duration
   });
 }
 
