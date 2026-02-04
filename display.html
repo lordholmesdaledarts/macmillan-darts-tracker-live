@@ -18,7 +18,7 @@
       </p>
     </header>
 
-    <!-- ROW 1: Primary -->
+    <!-- ROW 1 -->
     <div class="display-grid primary-grid">
       <!-- Points remaining -->
       <section class="hero-card">
@@ -37,7 +37,7 @@
       </section>
     </div>
 
-    <!-- ROW 2: Secondary -->
+    <!-- ROW 2 -->
     <div class="display-grid secondary-grid">
       <!-- Total points -->
       <section class="card">
@@ -69,6 +69,7 @@ import { supabase, EVENT_ID } from "./supabase.js";
 
 let state = null;
 
+/* ---------- Helpers ---------- */
 function num(v, fallback = 0) {
   const n = Number(v);
   return Number.isFinite(n) ? n : fallback;
@@ -86,6 +87,7 @@ function formatTimeHM(ms) {
   return `${h}h ${m}m`;
 }
 
+/* ---------- Main render (DATA changes only) ---------- */
 function render() {
   if (!state) return;
 
@@ -103,8 +105,12 @@ function render() {
   const pct = target ? Math.min(100, (total / target) * 100) : 0;
   bar.style.width = pct + "%";
   progressPct.textContent = `${pct.toFixed(1)}%`;
+}
 
-  // Time
+/* ---------- Timer-only tick (every second) ---------- */
+function tickTimerOnly() {
+  if (!state) return;
+
   const minutes = getDurationMinutes(state);
   if (!minutes) {
     timeRemaining.textContent = "—";
@@ -121,6 +127,7 @@ function render() {
   timeRemaining.textContent = formatTimeHM(remainingMs);
 }
 
+/* ---------- Initial load ---------- */
 async function load() {
   const { data, error } = await supabase
     .from("events")
@@ -135,8 +142,10 @@ async function load() {
 
   state = data;
   render();
+  tickTimerOnly();
 }
 
+/* ---------- Realtime updates ---------- */
 supabase
   .channel("events-display")
   .on(
@@ -145,12 +154,13 @@ supabase
     payload => {
       state = payload.new;
       render();
+      tickTimerOnly();
     }
   )
   .subscribe();
 
 await load();
-setInterval(render, 1000);
+setInterval(tickTimerOnly, 1000);
 </script>
 
 </body>
