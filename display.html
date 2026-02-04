@@ -13,7 +13,7 @@
   <section class="card">
 
     <div class="label">Time remaining</div>
-    <div class="value hero mono" id="time">--:--</div>
+    <div class="value hero mono" id="time">--</div>
 
     <div class="progress">
       <div class="bar" id="bar"></div>
@@ -30,39 +30,24 @@ import { supabase, EVENT_ID } from "./supabase.js";
 
 let state = null;
 
-function tick() {
+function render() {
   if (!state || !state.started_at) return;
 
   const start = new Date(state.started_at).getTime();
   const durationMs = state.duration_minutes * 60 * 1000;
-  const now = Date.now();
-  const elapsed = Math.min(durationMs, now - start);
-  const remaining = Math.max(0, durationMs - elapsed);
+  const elapsed = Math.min(durationMs, Date.now() - start);
+  const remainingMs = Math.max(0, durationMs - elapsed);
 
-  const mins = Math.floor(remaining / 60000);
-  const secs = Math.floor((remaining % 60000) / 1000);
-  time.textContent = `${mins}:${secs.toString().padStart(2, "0")}`;
-}
+  const hours = Math.floor(remainingMs / 3600000);
+  const mins = Math.floor((remainingMs % 3600000) / 60000);
 
-function render() {
-  if (!state) return;
+  time.textContent = `${hours}h ${mins}m`;
 
   remaining.textContent =
     Math.max(0, state.target - state.total).toLocaleString();
 
-  const pct = Math.min(100, (state.total / state.target) * 100);
-  bar.style.width = pct + "%";
-}
-
-async function load() {
-  const { data } = await supabase
-    .from("events")
-    .select("*")
-    .eq("id", EVENT_ID)
-    .single();
-
-  state = data;
-  render();
+  bar.style.width =
+    Math.min(100, (state.total / state.target) * 100) + "%";
 }
 
 supabase.channel("events")
@@ -72,8 +57,11 @@ supabase.channel("events")
   })
   .subscribe();
 
-setInterval(tick, 1000);
-load();
+setInterval(render, 60000);
+
+const { data } = await supabase.from("events").select("*").eq("id", EVENT_ID).single();
+state = data;
+render();
 </script>
 
 </body>
