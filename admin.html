@@ -42,7 +42,8 @@
   <details>
     <summary class="label">Event setup</summary>
 
-    <div class="admin-grid" style="margin-top:1rem">
+    <div class="admin-grid" style="margin-top:1.25rem">
+
       <div class="card">
         <div class="label">Target points</div>
         <input id="target">
@@ -56,14 +57,27 @@
       <div class="card">
         <div class="label">Amount raised (£)</div>
         <input id="amount">
+        <button class="primary" id="updateAmount" style="margin-top:0.75rem">
+          Update amount
+        </button>
       </div>
 
       <div class="card">
         <div class="label">Timer</div>
-        <button class="primary" id="start">Start</button>
-        <button id="pause">Pause</button>
-        <button id="reset">Reset</button>
+        <div style="display:flex; gap:0.5rem; margin-top:0.5rem">
+          <button class="primary" id="start">Start</button>
+          <button id="pause">Pause</button>
+          <button id="reset">Reset</button>
+        </div>
       </div>
+
+      <div class="card">
+        <div class="label">Total points</div>
+        <button class="warn" id="resetPoints">
+          Reset total points
+        </button>
+      </div>
+
     </div>
   </details>
 
