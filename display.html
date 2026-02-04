@@ -137,9 +137,8 @@ supabase
   .subscribe();
 
 // Re-render every second so timer ticks smoothly
+await load();
 setInterval(render, 1000);
-
-load();
 </script>
 
 </body>
