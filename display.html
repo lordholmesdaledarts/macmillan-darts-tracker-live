@@ -10,12 +10,10 @@
 <body class="display">
   <div class="wrap display-wrap">
 
-    <!-- Title -->
     <header class="display-title">
       <h1>Macmillan Darts Marathon</h1>
     </header>
 
-    <!-- Main hero area -->
     <div class="display-grid">
       <section class="hero-card tall">
         <div class="label">Points remaining</div>
@@ -37,7 +35,6 @@
       </section>
     </div>
 
-    <!-- Amount raised pinned to bottom -->
     <div class="amount big amount-bottom">
       Amount raised: £<span id="amountRaised">0</span>
     </div>
@@ -55,62 +52,52 @@ function num(v, fallback = 0) {
 }
 
 function getDurationMinutes(s) {
-  // Support BOTH possible schemas:
-  // - duration_minutes (old)
-  // - duration_hours (new)
-  if (s && s.duration_minutes != null) return num(s.duration_minutes, 0);
-  if (s && s.duration_hours != null) return num(s.duration_hours, 0) * 60;
+  if (s?.duration_minutes != null) return num(s.duration_minutes);
+  if (s?.duration_hours != null) return num(s.duration_hours) * 60;
   return 0;
 }
 
 function formatTimeHM(ms) {
-  const clamped = Math.max(0, ms);
-  const h = Math.floor(clamped / 3600000);
-  const m = Math.floor((clamped % 3600000) / 60000);
+  const h = Math.floor(ms / 3600000);
+  const m = Math.floor((ms % 3600000) / 60000);
   return `${h}h ${m}m`;
 }
 
 function render() {
   if (!state) return;
 
-  const total = num(state.total, 0);
-  const target = num(state.target, 0);
+  const total = num(state.total);
+  const target = num(state.target);
 
   // Points
   pointsTotal.textContent = total.toLocaleString();
-  const remaining = Math.max(0, target - total);
-  pointsRemaining.textContent = target ? remaining.toLocaleString() : "—";
+  pointsRemaining.textContent = target
+    ? Math.max(0, target - total).toLocaleString()
+    : "—";
 
-  // Progress bar
-  const pct = target ? Math.min(100, (total / target) * 100) : 0;
-  bar.style.width = pct + "%";
+  // Progress
+  bar.style.width = target ? `${Math.min(100, (total / target) * 100)}%` : "0%";
 
-  // Amount raised (Supabase numeric often comes back as string)
-  const raised = num(state.amount_raised, 0);
-  amountRaised.textContent = raised.toLocaleString();
+  // Amount raised
+  amountRaised.textContent = num(state.amount_raised).toLocaleString();
 
-  // Time remaining
+  // Time
   const minutes = getDurationMinutes(state);
-  const startedAt = state.started_at ? new Date(state.started_at).getTime() : null;
-
   if (!minutes) {
     timeRemaining.textContent = "—";
     return;
   }
 
-  // If not started yet, show full duration
-  if (!startedAt) {
+  if (!state.started_at) {
     timeRemaining.textContent = formatTimeHM(minutes * 60000);
     return;
   }
 
-  const durationMs = minutes * 60000;
-  const elapsedMs = Date.now() - startedAt;
-  const remainingMs = Math.max(0, durationMs - elapsedMs);
+  const start = new Date(state.started_at).getTime();
+  const remainingMs = Math.max(0, minutes * 60000 - (Date.now() - start));
   timeRemaining.textContent = formatTimeHM(remainingMs);
 }
 
-// Initial load
 async function load() {
   const { data, error } = await supabase
     .from("events")
@@ -119,7 +106,7 @@ async function load() {
     .single();
 
   if (error) {
-    alert("Display failed to load event: " + error.message);
+    alert(error.message);
     return;
   }
 
@@ -127,16 +114,19 @@ async function load() {
   render();
 }
 
-// Live updates
+// Realtime updates
 supabase
   .channel("events-display")
-  .on("postgres_changes", { event: "UPDATE", schema: "public", table: "events" }, payload => {
-    state = payload.new;
-    render();
-  })
+  .on(
+    "postgres_changes",
+    { event: "UPDATE", schema: "public", table: "events" },
+    payload => {
+      state = payload.new;
+      render();
+    }
+  )
   .subscribe();
 
-// Re-render every second so timer ticks smoothly
 await load();
 setInterval(render, 1000);
 </script>
