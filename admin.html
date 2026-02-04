@@ -15,8 +15,9 @@
       <p class="sub">Admin control</p>
     </header>
 
-    <!-- TOP ROW: score entry (left) + total points (right) -->
+    <!-- TOP ROW -->
     <div class="admin-top">
+      <!-- Score entry -->
       <section class="card">
         <div class="label">Score entry</div>
 
@@ -35,15 +36,16 @@
           <button class="chip" data-add="501">+501</button>
         </div>
 
-        <p class="subtle" style="margin:0.9rem 0 0">
+        <p class="subtle" style="margin-top:0.9rem">
           Tip: type a number → Add. Undo reverses the last added amount.
         </p>
       </section>
 
+      <!-- Total points -->
       <section class="card">
         <div class="label">Total points</div>
         <div class="hero-value mono" id="total">0</div>
-        <p class="subtle" style="margin:0.75rem 0 0">
+        <p class="subtle" style="margin-top:0.75rem">
           Live value used on the display screen.
         </p>
       </section>
@@ -54,22 +56,66 @@
       <summary>Event setup</summary>
 
       <div class="settings-grid">
+
+        <!-- Target & duration -->
+        <section class="card">
+          <div class="label">Event targets</div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem; margin-top:0.5rem">
+            <input id="targetInput" type="number" placeholder="Target points" />
+            <input id="hoursInput" type="number" placeholder="Hours" />
+          </div>
+
+          <button class="primary full" id="saveTargets" style="margin-top:0.9rem">
+            Save targets
+          </button>
+
+          <p class="subtle" style="margin-top:0.6rem">
+            Used for progress and countdown.
+          </p>
+        </section>
+
+        <!-- Timer -->
+        <section class="card">
+          <div class="label">Timer</div>
+
+          <div style="display:flex; gap:0.6rem; margin-top:0.75rem">
+            <button class="primary" id="startTimer">Start / Resume</button>
+            <button id="pauseTimer">Pause</button>
+            <button id="resetTimer">Reset</button>
+          </div>
+
+          <p class="subtle" style="margin-top:0.6rem">
+            Controls the event countdown.
+          </p>
+        </section>
+
+        <!-- Amount raised -->
         <section class="card">
           <div class="label">Amount raised (£)</div>
+
           <div class="entry-wide">
             <input id="amountInput" type="number" inputmode="numeric" placeholder="e.g. 7500" />
             <button class="primary" id="saveAmount">Update</button>
           </div>
-          <p class="subtle" style="margin:0.75rem 0 0">Shows on the display immediately.</p>
+
+          <p class="subtle" style="margin-top:0.6rem">
+            Shows on the display immediately.
+          </p>
         </section>
 
+        <!-- Reset points -->
         <section class="card warn-card">
           <div class="label">Total points</div>
-          <button class="warn full" id="resetPointsBtn">Reset total points</button>
-          <p class="subtle" style="margin:0.75rem 0 0">
+          <button class="warn full" id="resetPointsBtn">
+            Reset total points
+          </button>
+
+          <p class="subtle" style="margin-top:0.6rem">
             Resets total back to 0 (timer unchanged).
           </p>
         </section>
+
       </div>
     </details>
 
@@ -80,6 +126,7 @@ import { supabase, EVENT_ID } from "./supabase.js";
 
 let state = null;
 
+/* ---------- Load ---------- */
 async function load() {
   const { data, error } = await supabase
     .from("events")
@@ -95,8 +142,11 @@ async function load() {
   state = data;
   total.textContent = Number(state.total || 0).toLocaleString();
   amountInput.value = state.amount_raised ?? "";
+  targetInput.value = state.target ?? "";
+  hoursInput.value = state.duration_hours ?? "";
 }
 
+/* ---------- Helpers ---------- */
 async function updateEvent(patch) {
   const { error } = await supabase
     .from("events")
@@ -109,68 +159,84 @@ async function updateEvent(patch) {
   }
 }
 
+/* ---------- Scoring ---------- */
 async function add(delta) {
   if (!state) return;
-  const nextTotal = Math.max(0, Number(state.total || 0) + delta);
-
   await updateEvent({
-    total: nextTotal,
+    total: Math.max(0, state.total + delta),
     last_delta: delta
   });
-
-  // Clear & dismiss keyboard nicely
   manual.value = "";
   manual.blur();
 }
 
 async function undo() {
-  if (!state) return;
-  const last = Number(state.last_delta || 0);
-  if (!last) return alert("Nothing to undo.");
+  if (!state?.last_delta) return alert("Nothing to undo.");
+  if (!confirm(`Undo last entry (${state.last_delta})?`)) return;
 
-  if (!confirm(`Undo last entry (${last})?`)) return;
-
-  const nextTotal = Math.max(0, Number(state.total || 0) - last);
   await updateEvent({
-    total: nextTotal,
+    total: Math.max(0, state.total - state.last_delta),
     last_delta: 0
   });
+}
+
+/* ---------- Event controls ---------- */
+async function saveTargets() {
+  await updateEvent({
+    target: Number(targetInput.value || 0),
+    duration_hours: Number(hoursInput.value || 0)
+  });
+}
+
+async function startTimer() {
+  await updateEvent({
+    started_at: new Date().toISOString()
+  });
+}
+
+async function pauseTimer() {
+  await updateEvent({ started_at: null });
+}
+
+async function resetTimer() {
+  if (!confirm("Reset the timer?")) return;
+  await updateEvent({ started_at: null });
 }
 
 async function resetPoints() {
   if (!confirm("Reset total points to 0?")) return;
-
-  // Await it so it actually happens
-  await updateEvent({
-    total: 0,
-    last_delta: 0
-  });
+  await updateEvent({ total: 0, last_delta: 0 });
 }
 
 async function saveAmount() {
-  const val = Number(amountInput.value || 0);
-  await updateEvent({ amount_raised: val });
+  await updateEvent({
+    amount_raised: Number(amountInput.value || 0)
+  });
 }
 
-document.querySelectorAll("[data-add]").forEach(btn => {
-  btn.addEventListener("click", () => add(Number(btn.dataset.add)));
-});
+/* ---------- Wiring ---------- */
+document.querySelectorAll("[data-add]").forEach(b =>
+  b.addEventListener("click", () => add(Number(b.dataset.add)))
+);
 
-addManual.addEventListener("click", () => {
+addManual.onclick = () => {
   const v = Number(manual.value || 0);
-  if (!v) return;
-  add(v);
-});
+  if (v) add(v);
+};
 
-undoBtn.addEventListener("click", undo);
-resetPointsBtn.addEventListener("click", resetPoints);
-saveAmount.addEventListener("click", saveAmount);
+undoBtn.onclick = undo;
+saveTargets.onclick = saveTargets;
+startTimer.onclick = startTimer;
+pauseTimer.onclick = pauseTimer;
+resetTimer.onclick = resetTimer;
+resetPointsBtn.onclick = resetPoints;
+saveAmount.onclick = saveAmount;
 
-// Realtime updates so the right-hand total always reflects truth
+/* ---------- Realtime sync ---------- */
 supabase
   .channel("events")
-  .on("postgres_changes", { event: "UPDATE", schema: "public", table: "events" }, payload => {
-    state = payload.new;
+  .on("postgres_changes", { event: "UPDATE", schema: "public", table: "events" }, p => {
+    state = p.new;
     total.textContent = Number(state.total || 0).toLocaleString();
   })
   .subscribe();
