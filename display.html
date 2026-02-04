@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Live Display – Macmillan Darts</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body class="big">
+
+<div class="wrap">
+  <section class="card">
+    <div class="label">Points remaining</div>
+    <div class="value hero mono" id="remaining">—</div>
+
+    <div class="spacer"></div>
+
+    <div class="label">Total points</div>
+    <div class="value mono" id="total">0</div>
+  </section>
+</div>
+
+<script type="module">
+  import { supabase, EVENT_ID } from "./supabase.js";
+
+  const remainingEl = document.getElementById("remaining");
+  const totalEl = document.getElementById("total");
+  const TARGET = 100000;
+
+  function render(total) {
+    totalEl.textContent = total.toLocaleString();
+    remainingEl.textContent = Math.max(0, TARGET - total).toLocaleString();
+  }
+
+  supabase
+    .channel("events")
+    .on(
+      "postgres_changes",
+      { event: "UPDATE", schema: "public", table: "events" },
+      payload => {
+        render(payload.new.total);
+      }
+    )
+    .subscribe();
+
+  const { data } = await supabase
+    .from("events")
+    .select("total")
+    .eq("id", EVENT_ID)
+    .single();
+
+  if (data) render(data.total);
+</script>
+
+</body>
+</html>
