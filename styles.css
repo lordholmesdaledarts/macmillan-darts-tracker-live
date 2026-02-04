@@ -348,3 +348,11 @@ body.display .amount.big {
   font-size: 2.6rem;
   font-weight: 600;
 }
+body.display .progress {
+  background: rgba(255,255,255,0.22);
+}
+
+body.display .progress .bar {
+  background: linear-gradient(90deg, #39d98a, #6ee7b7);
+  box-shadow: 0 0 12px rgba(57, 217, 138, 0.45);
+}
