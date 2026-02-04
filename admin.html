@@ -216,10 +216,17 @@ async function resetPoints() {
 
 async function saveAmount() {
   const value = Number(amountInput.value || 0);
+  console.log("Saving amount:", value, "for EVENT_ID:", EVENT_ID);
 
-  await updateEvent({
-    amount_raised: value
-  });
+  const { data, error } = await supabase
+    .from("events")
+    .update({ amount_raised: value })
+    .eq("id", EVENT_ID)
+    .select();
+
+  console.log("Supabase response:", data, error);
+
+  if (error) alert(error.message);
 }
 
 /* ---------- Wiring ---------- */
