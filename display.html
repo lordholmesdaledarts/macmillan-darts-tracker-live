@@ -1,45 +1,146 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Macmillan Darts – Display</title>
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="./styles.css" />
 </head>
 
 <body class="display">
-<div class="wrap">
+  <div class="wrap display-wrap">
 
-  <div class="display-grid">
+    <!-- Title -->
+    <header class="display-title">
+      <h1>Macmillan Darts Marathon</h1>
+    </header>
 
-    <div class="hero-card tall">
-      <div class="label">Points remaining</div>
-      <div class="hero-value mono" id="pointsRemaining">—</div>
-      <div class="subtle">
-        Total scored: <span id="pointsTotal">0</span>
-      </div>
+    <!-- Main hero area -->
+    <div class="display-grid">
+      <section class="hero-card tall">
+        <div class="label">Points remaining</div>
+        <div class="hero-value mono" id="pointsRemaining">—</div>
+        <div class="subtle">Total scored: <span id="pointsTotal">0</span></div>
 
-      <div class="progress-wrap">
-        <div class="progress-label">Progress</div>
-        <div class="progress">
-          <div class="bar" id="bar"></div>
+        <div class="progress-wrap">
+          <div class="progress-label">Progress</div>
+          <div class="progress">
+            <div class="bar" id="bar"></div>
+          </div>
         </div>
-      </div>
+      </section>
+
+      <section class="hero-card tall">
+        <div class="label">Time remaining</div>
+        <div class="hero-value mono" id="timeRemaining">—</div>
+        <div class="subtle">Until end of event</div>
+      </section>
     </div>
 
-    <div class="hero-card tall">
-      <div class="label">Time remaining</div>
-      <div class="hero-value mono" id="timeRemaining">—</div>
-      <div class="subtle">Until end of event</div>
+    <!-- Amount raised pinned to bottom -->
+    <div class="amount big amount-bottom">
+      Amount raised: £<span id="amountRaised">0</span>
     </div>
 
   </div>
 
-  <div class="amount big">
-    Amount raised: £<span id="amountRaised">0</span>
-  </div>
+<script type="module">
+import { supabase, EVENT_ID } from "./supabase.js";
 
-</div>
+let state = null;
 
-<script type="module" src="app.js"></script>
+function num(v, fallback = 0) {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+function getDurationMinutes(s) {
+  // Support BOTH possible schemas:
+  // - duration_minutes (old)
+  // - duration_hours (new)
+  if (s && s.duration_minutes != null) return num(s.duration_minutes, 0);
+  if (s && s.duration_hours != null) return num(s.duration_hours, 0) * 60;
+  return 0;
+}
+
+function formatTimeHM(ms) {
+  const clamped = Math.max(0, ms);
+  const h = Math.floor(clamped / 3600000);
+  const m = Math.floor((clamped % 3600000) / 60000);
+  return `${h}h ${m}m`;
+}
+
+function render() {
+  if (!state) return;
+
+  const total = num(state.total, 0);
+  const target = num(state.target, 0);
+
+  // Points
+  pointsTotal.textContent = total.toLocaleString();
+  const remaining = Math.max(0, target - total);
+  pointsRemaining.textContent = target ? remaining.toLocaleString() : "—";
+
+  // Progress bar
+  const pct = target ? Math.min(100, (total / target) * 100) : 0;
+  bar.style.width = pct + "%";
+
+  // Amount raised (Supabase numeric often comes back as string)
+  const raised = num(state.amount_raised, 0);
+  amountRaised.textContent = raised.toLocaleString();
+
+  // Time remaining
+  const minutes = getDurationMinutes(state);
+  const startedAt = state.started_at ? new Date(state.started_at).getTime() : null;
+
+  if (!minutes) {
+    timeRemaining.textContent = "—";
+    return;
+  }
+
+  // If not started yet, show full duration
+  if (!startedAt) {
+    timeRemaining.textContent = formatTimeHM(minutes * 60000);
+    return;
+  }
+
+  const durationMs = minutes * 60000;
+  const elapsedMs = Date.now() - startedAt;
+  const remainingMs = Math.max(0, durationMs - elapsedMs);
+  timeRemaining.textContent = formatTimeHM(remainingMs);
+}
+
+// Initial load
+async function load() {
+  const { data, error } = await supabase
+    .from("events")
+    .select("*")
+    .eq("id", EVENT_ID)
+    .single();
+
+  if (error) {
+    alert("Display failed to load event: " + error.message);
+    return;
+  }
+
+  state = data;
+  render();
+}
+
+// Live updates
+supabase
+  .channel("events-display")
+  .on("postgres_changes", { event: "UPDATE", schema: "public", table: "events" }, payload => {
+    state = payload.new;
+    render();
+  })
+  .subscribe();
+
+// Re-render every second so timer ticks smoothly
+setInterval(render, 1000);
+
+load();
+</script>
+
 </body>
 </html>
