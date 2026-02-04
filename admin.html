@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Admin Control – Macmillan Darts</title>
+  <title>Admin Control – Charity Event</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 
@@ -12,7 +12,7 @@
 <div class="wrap">
   <header class="title">
     <h1>Admin Control</h1>
-    <p class="sub">Live score entry · Charity event</p>
+    <p class="sub">Live score & timing · Charity event</p>
   </header>
 
   <div class="grid">
@@ -23,15 +23,34 @@
       <div class="value hero mono" id="total">0</div>
     </section>
 
+    <!-- Event settings -->
+    <section class="card">
+      <div class="label">Event settings</div>
+
+      <div class="row">
+        <input id="targetInput" type="number" inputmode="numeric" placeholder="Target points" />
+        <input id="durationInput" type="number" inputmode="numeric" placeholder="Hours" />
+      </div>
+
+      <button class="primary full" id="saveSettings">Save settings</button>
+    </section>
+
+    <!-- Timer -->
+    <section class="card">
+      <div class="label">Timer</div>
+      <div class="row">
+        <button class="chip" id="startBtn">Start</button>
+        <button class="chip" id="pauseBtn">Pause</button>
+        <button class="chip" id="resetBtn">Reset</button>
+      </div>
+    </section>
+
     <!-- Quick add -->
     <section class="card">
       <div class="label">Quick add</div>
       <div class="quick">
         <button class="chip" data-add="26">+26</button>
-        <button class="chip" data-add="41">+41</button>
-        <button class="chip" data-add="45">+45</button>
         <button class="chip" data-add="60">+60</button>
-        <button class="chip" data-add="85">+85</button>
         <button class="chip" data-add="100">+100</button>
         <button class="chip" data-add="140">+140</button>
         <button class="chip" data-add="180">+180</button>
@@ -44,12 +63,7 @@
     <section class="card">
       <div class="label">Manual entry</div>
       <div class="row">
-        <input
-          id="manual"
-          type="number"
-          inputmode="numeric"
-          placeholder="Score (e.g. 500)"
-        />
+        <input id="manual" type="number" inputmode="numeric" placeholder="Score" />
         <button class="primary" id="addManual">Add</button>
       </div>
     </section>
@@ -62,104 +76,125 @@
 
   </div>
 
-  <p class="footer-note">
-    Admin only · Updates appear instantly on the big screen
-  </p>
+  <p class="footer-note">Admin only · Everything syncs live</p>
 </div>
 
 <script type="module">
-  import { supabase, EVENT_ID } from "./supabase.js";
+import { supabase, EVENT_ID } from "./supabase.js";
 
-  const totalEl = document.getElementById("total");
+const totalEl = document.getElementById("total");
+const targetInput = document.getElementById("targetInput");
+const durationInput = document.getElementById("durationInput");
 
-  async function load() {
-    const { data } = await supabase
-      .from("events")
-      .select("total")
-      .eq("id", EVENT_ID)
-      .single();
+async function load() {
+  const { data } = await supabase
+    .from("events")
+    .select("*")
+    .eq("id", EVENT_ID)
+    .single();
 
-    if (data) {
-      totalEl.textContent = data.total.toLocaleString();
-    }
-  }
+  if (!data) return;
 
-  async function add(delta) {
-    const { data } = await supabase
-      .from("events")
-      .select("total")
-      .eq("id", EVENT_ID)
-      .single();
+  totalEl.textContent = data.total.toLocaleString();
+  targetInput.value = data.target;
+  durationInput.value = Math.round(data.duration_minutes / 60);
+}
 
-    if (!data) return;
+async function add(delta) {
+  const { data } = await supabase
+    .from("events")
+    .select("total")
+    .eq("id", EVENT_ID)
+    .single();
 
-    const next = Math.max(0, data.total + delta);
+  await supabase
+    .from("events")
+    .update({
+      total: Math.max(0, data.total + delta),
+      last_delta: delta
+    })
+    .eq("id", EVENT_ID);
+}
 
-    await supabase
-      .from("events")
-      .update({
-        total: next,
-        last_delta: delta
-      })
-      .eq("id", EVENT_ID);
-  }
+async function undo() {
+  const { data } = await supabase
+    .from("events")
+    .select("total, last_delta")
+    .eq("id", EVENT_ID)
+    .single();
 
-  async function undo() {
-    const { data } = await supabase
-      .from("events")
-      .select("total, last_delta")
-      .eq("id", EVENT_ID)
-      .single();
+  if (!data.last_delta) return alert("Nothing to undo.");
 
-    if (!data || !data.last_delta) {
-      alert("Nothing to undo.");
-      return;
-    }
+  if (!confirm(`Undo last entry (${data.last_delta})?`)) return;
 
-    if (!confirm(`Undo last entry (${data.last_delta})?`)) return;
+  await supabase
+    .from("events")
+    .update({
+      total: Math.max(0, data.total - data.last_delta),
+      last_delta: 0
+    })
+    .eq("id", EVENT_ID);
+}
 
-    const next = Math.max(0, data.total - data.last_delta);
+async function saveSettings() {
+  const target = Number(targetInput.value);
+  const hours = Number(durationInput.value);
+  if (!target || !hours) return;
 
-    await supabase
-      .from("events")
-      .update({
-        total: next,
-        last_delta: 0
-      })
-      .eq("id", EVENT_ID);
-  }
+  await supabase
+    .from("events")
+    .update({
+      target,
+      duration_minutes: hours * 60
+    })
+    .eq("id", EVENT_ID);
+}
 
-  // Buttons
-  document.querySelectorAll("[data-add]").forEach(btn => {
-    btn.onclick = () => add(Number(btn.dataset.add));
-  });
+async function startTimer() {
+  await supabase.from("events").update({
+    started_at: new Date().toISOString(),
+    paused_at: null,
+    is_running: true
+  }).eq("id", EVENT_ID);
+}
 
-  document.getElementById("addManual").onclick = () => {
-    const input = document.getElementById("manual");
-    const val = Number(input.value);
-    if (val > 0) {
-      add(val);
-      input.value = "";
-      input.blur();
-    }
-  };
+async function pauseTimer() {
+  await supabase.from("events").update({
+    paused_at: new Date().toISOString(),
+    is_running: false
+  }).eq("id", EVENT_ID);
+}
 
-  document.getElementById("undoBtn").onclick = undo;
+async function resetTimer() {
+  if (!confirm("Reset timer?")) return;
+  await supabase.from("events").update({
+    started_at: null,
+    paused_at: null,
+    is_running: false
+  }).eq("id", EVENT_ID);
+}
 
-  // Realtime updates
-  supabase
-    .channel("events")
-    .on(
-      "postgres_changes",
-      { event: "UPDATE", schema: "public", table: "events" },
-      payload => {
-        totalEl.textContent =
-          payload.new.total.toLocaleString();
-      }
-    )
-    .subscribe();
+document.querySelectorAll("[data-add]").forEach(b =>
+  b.onclick = () => add(Number(b.dataset.add))
+);
 
-  load();
+document.getElementById("addManual").onclick = () => {
+  const v = Number(manual.value);
+  if (v) add(v);
+  manual.value = "";
+};
+
+document.getElementById("undoBtn").onclick = undo;
+document.getElementById("saveSettings").onclick = saveSettings;
+document.getElementById("startBtn").onclick = startTimer;
+document.getElementById("pauseBtn").onclick = pauseTimer;
+document.getElementById("resetBtn").onclick = resetTimer;
+
+supabase.channel("events")
+  .on("postgres_changes", { event: "UPDATE", table: "events" }, load)
+  .subscribe();
+
+load();
 </script>
 
 </body>
