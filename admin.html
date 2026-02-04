@@ -243,12 +243,17 @@ saveAmount.onclick = saveAmount;
 /* ---------- Realtime sync ---------- */
 supabase
   .channel("events")
-.on("postgres_changes", { event: "UPDATE", schema: "public", table: "events" }, p => {
-  state = p.new;
+  .on(
+    "postgres_changes",
+    { event: "UPDATE", schema: "public", table: "events" },
+    p => {
+      state = p.new;
 
-  total.textContent = Number(state.total || 0).toLocaleString();
-  amountInput.value = state.amount_raised ?? "";
-})
+      // Keep admin UI fully in sync with database
+      total.textContent = Number(state.total || 0).toLocaleString();
+      amountInput.value = state.amount_raised ?? "";
+    }
+  )
   .subscribe();
 
 load();
