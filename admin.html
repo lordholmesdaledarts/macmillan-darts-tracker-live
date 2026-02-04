@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Admin – Macmillan Darts</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<div class="wrap">
+  <header class="title">
+    <h1>Admin Control</h1>
+    <p class="sub">Live score entry</p>
+  </header>
+
+  <section class="card">
+    <div class="value hero mono" id="total">0</div>
+    <div class="label">Total points</div>
+
+    <div class="spacer"></div>
+
+    <div class="quick">
+      <button class="chip" data-add="500">+500</button>
+      <button class="chip" data-add="800">+800</button>
+      <button class="chip" data-add="1000">+1000</button>
+    </div>
+
+    <div class="spacer"></div>
+
+    <div class="row">
+      <input id="manual" type="number" inputmode="numeric" placeholder="Custom amount" />
+      <button class="primary" id="addManual">Add</button>
+    </div>
+
+    <div class="spacer"></div>
+
+    <button class="warn" id="undoBtn">Undo last</button>
+  </section>
+</div>
+
+<script type="module">
+  import { supabase, EVENT_ID } from "./supabase.js";
+
+  const totalEl = document.getElementById("total");
+
+  async function load() {
+    const { data } = await supabase
+      .from("events")
+      .select("total")
+      .eq("id", EVENT_ID)
+      .single();
+
+    if (data) totalEl.textContent = data.total.toLocaleString();
+  }
+
+  async function add(delta) {
+    const { data } = await supabase
+      .from("events")
+      .select("total")
+      .eq("id", EVENT_ID)
+      .single();
+
+    const next = Math.max(0, data.total + delta);
+
+    await supabase
+      .from("events")
+      .update({ total: next })
+      .eq("id", EVENT_ID);
+  }
+
+  document.querySelectorAll("[data-add]").forEach(btn => {
+    btn.onclick = () => add(Number(btn.dataset.add));
+  });
+
+  document.getElementById("addManual").onclick = () => {
+    const val = Number(document.getElementById("manual").value);
+    if (val) add(val);
+    document.getElementById("manual").value = "";
+  };
+
+  document.getElementById("undoBtn").onclick = async () => {
+    if (!confirm("Undo last entry?")) return;
+    await add(-500); // simple undo for now (can improve later)
+  };
+
+  supabase
+    .channel("events")
+    .on(
+      "postgres_changes",
+      { event: "UPDATE", schema: "public", table: "events" },
+      payload => {
+        totalEl.textContent = payload.new.total.toLocaleString();
+      }
+    )
+    .subscribe();
+
+  load();
+</script>
+
+</body>
+</html>
