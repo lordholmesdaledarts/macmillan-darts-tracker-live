@@ -185,10 +185,20 @@ async function undo() {
 
 /* ---------- Event controls ---------- */
 async function saveTargets() {
-  const hours = Number(hoursInput.value || 0);
+  const rawTarget = targetInput.value || "0";
+  const rawHours = hoursInput.value || "0";
+
+  // ✅ Strip commas before Number()
+  const target = Number(rawTarget.replace(/,/g, ""));
+  const hours = Number(rawHours.replace(/,/g, ""));
+
+  if (!Number.isFinite(target) || !Number.isFinite(hours)) {
+    alert("Please enter valid numbers (no letters).");
+    return;
+  }
 
   await updateEvent({
-    target: Number(targetInput.value || 0),
+    target,
     duration_hours: hours,
     duration_minutes: hours * 60,
     started_at: null
