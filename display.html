@@ -17,68 +17,97 @@
 
 <main class="display-grid">
 
+  <!-- POINTS -->
   <section class="hero-box">
     <div class="label">Points remaining</div>
-    <div class="hero-value mono" id="points">—</div>
+    <div class="hero-value mono" id="pointsRemaining">—</div>
+    <div class="sub-value mono">
+      Total scored: <span id="pointsTotal">0</span>
+    </div>
   </section>
 
+  <!-- TIME -->
   <section class="hero-box">
     <div class="label">Time remaining</div>
-    <div class="hero-value mono" id="time">—</div>
+    <div class="hero-value mono" id="timeRemaining">—</div>
+    <div class="sub-value">
+      Until end of event
+    </div>
   </section>
 
 </main>
 
 <footer class="display-footer">
+
   <div class="raised">
     Amount raised:
-    <strong>£<span id="amount">0</span></strong>
+    <strong>£<span id="amountRaised">0</span></strong>
   </div>
+
+  <!-- Progress toward POINTS TARGET -->
   <div class="progress">
-    <div class="bar" id="bar"></div>
+    <div class="bar" id="progressBar"></div>
   </div>
+
 </footer>
 
 <script type="module">
 import { supabase, EVENT_ID } from "./supabase.js";
 
-let state;
+let state = null;
 
 function render() {
   if (!state) return;
 
-  // Points
-  points.textContent =
-    Math.max(0, state.target - state.total).toLocaleString();
+  /* Points */
+  const remainingPoints = Math.max(0, state.target - state.total);
+  pointsRemaining.textContent = remainingPoints.toLocaleString();
+  pointsTotal.textContent = state.total.toLocaleString();
 
-  // Time
+  /* Time */
   if (state.started_at) {
     const start = new Date(state.started_at).getTime();
-    const durationMs = state.duration_minutes * 60000;
-    const remainingMs = Math.max(0, durationMs - (Date.now() - start));
-    const h = Math.floor(remainingMs / 3600000);
-    const m = Math.floor((remainingMs % 3600000) / 60000);
-    time.textContent = `${h}h ${m}m`;
+    const durationMs = state.duration_minutes * 60 * 1000;
+    const elapsed = Date.now() - start;
+    const remainingMs = Math.max(0, durationMs - elapsed);
+
+    const hours = Math.floor(remainingMs / 3600000);
+    const mins = Math.floor((remainingMs % 3600000) / 60000);
+
+    timeRemaining.textContent = `${hours}h ${mins}m`;
+  } else {
+    timeRemaining.textContent = "—";
   }
 
-  // Amount raised
-  amount.textContent = (state.amount_raised || 0).toLocaleString();
+  /* Amount raised */
+  amountRaised.textContent =
+    (state.amount_raised || 0).toLocaleString();
 
-  // Progress bar (points)
-  bar.style.width =
-    Math.min(100, (state.total / state.target) * 100) + "%";
+  /* Progress bar = POINTS progress */
+  const pct = Math.min(100, (state.total / state.target) * 100);
+  progressBar.style.width = pct + "%";
 }
 
-supabase.channel("events")
-  .on("postgres_changes", { event: "UPDATE", table: "events" }, p => {
-    state = p.new;
-    render();
-  })
+supabase
+  .channel("events")
+  .on(
+    "postgres_changes",
+    { event: "UPDATE", schema: "public", table: "events" },
+    payload => {
+      state = payload.new;
+      render();
+    }
+  )
   .subscribe();
 
 setInterval(render, 60000);
 
-const { data } = await supabase.from("events").select("*").eq("id", EVENT_ID).single();
+const { data } = await supabase
+  .from("events")
+  .select("*")
+  .eq("id", EVENT_ID)
+  .single();
+
 state = data;
 render();
 </script>
