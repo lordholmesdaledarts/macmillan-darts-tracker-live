@@ -11,16 +11,22 @@
 
   <div class="display-grid">
 
-    <div class="hero-card">
+    <div class="hero-card tall">
       <div class="label">Points remaining</div>
       <div class="hero-value mono" id="pointsRemaining">—</div>
-      <div class="subtle">Total scored: <span id="pointsTotal">0</span></div>
-      <div class="progress">
-        <div class="bar" id="bar"></div>
+      <div class="subtle">
+        Total scored: <span id="pointsTotal">0</span>
+      </div>
+
+      <div class="progress-wrap">
+        <div class="progress-label">Progress</div>
+        <div class="progress">
+          <div class="bar" id="bar"></div>
+        </div>
       </div>
     </div>
 
-    <div class="hero-card">
+    <div class="hero-card tall">
       <div class="label">Time remaining</div>
       <div class="hero-value mono" id="timeRemaining">—</div>
       <div class="subtle">Until end of event</div>
@@ -28,7 +34,7 @@
 
   </div>
 
-  <div class="amount">
+  <div class="amount big">
     Amount raised: £<span id="amountRaised">0</span>
   </div>
 
