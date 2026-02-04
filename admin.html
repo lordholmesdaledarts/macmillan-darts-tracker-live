@@ -1,88 +1,182 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Macmillan Darts – Admin</title>
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="./styles.css" />
 </head>
 
 <body class="admin">
-<div class="wrap">
+  <div class="wrap">
 
-  <div class="admin-grid">
+    <header class="title">
+      <h1>Macmillan Darts</h1>
+      <p class="sub">Admin control</p>
+    </header>
 
-    <!-- LEFT: ENTRY -->
-    <div class="card">
-      <div class="label">Score entry</div>
+    <!-- TOP ROW: score entry (left) + total points (right) -->
+    <div class="admin-top">
+      <section class="card">
+        <div class="label">Score entry</div>
 
-      <div class="entry-row">
-        <input id="manual" placeholder="Score">
-        <button class="primary" id="addBtn">Add</button>
-        <button class="warn" id="undoBtn">Undo</button>
-      </div>
+        <div class="entry-wide">
+          <input id="manual" type="number" inputmode="numeric" placeholder="Score" />
+          <button class="primary" id="addManual">Add</button>
+          <button class="warn" id="undoBtn">Undo</button>
+        </div>
 
-      <div class="quick-row">
-        <button data-add="60">+60</button>
-        <button data-add="100">+100</button>
-        <button data-add="140">+140</button>
-        <button data-add="180">+180</button>
-        <button data-add="301">+301</button>
-        <button data-add="501">+501</button>
-      </div>
+        <div class="quick-row">
+          <button class="chip" data-add="60">+60</button>
+          <button class="chip" data-add="100">+100</button>
+          <button class="chip" data-add="140">+140</button>
+          <button class="chip" data-add="180">+180</button>
+          <button class="chip" data-add="301">+301</button>
+          <button class="chip" data-add="501">+501</button>
+        </div>
+
+        <p class="subtle" style="margin:0.9rem 0 0">
+          Tip: type a number → Add. Undo reverses the last added amount.
+        </p>
+      </section>
+
+      <section class="card">
+        <div class="label">Total points</div>
+        <div class="hero-value mono" id="total">0</div>
+        <p class="subtle" style="margin:0.75rem 0 0">
+          Live value used on the display screen.
+        </p>
+      </section>
     </div>
 
-    <!-- RIGHT: TOTAL -->
-    <div class="card">
-      <div class="label">Total points</div>
-      <div class="hero-value mono" id="total">0</div>
-    </div>
+    <!-- EVENT SETUP -->
+    <details class="admin-settings">
+      <summary>Event setup</summary>
+
+      <div class="settings-grid">
+        <section class="card">
+          <div class="label">Amount raised (£)</div>
+          <div class="entry-wide">
+            <input id="amountInput" type="number" inputmode="numeric" placeholder="e.g. 7500" />
+            <button class="primary" id="saveAmount">Update</button>
+          </div>
+          <p class="subtle" style="margin:0.75rem 0 0">Shows on the display immediately.</p>
+        </section>
+
+        <section class="card warn-card">
+          <div class="label">Total points</div>
+          <button class="warn full" id="resetPointsBtn">Reset total points</button>
+          <p class="subtle" style="margin:0.75rem 0 0">
+            Resets total back to 0 (timer unchanged).
+          </p>
+        </section>
+      </div>
+    </details>
 
   </div>
 
-  <details>
-    <summary class="label">Event setup</summary>
+<script type="module">
+import { supabase, EVENT_ID } from "./supabase.js";
 
-    <div class="admin-grid" style="margin-top:1.25rem">
+let state = null;
 
-      <div class="card">
-        <div class="label">Target points</div>
-        <input id="target">
-      </div>
+async function load() {
+  const { data, error } = await supabase
+    .from("events")
+    .select("*")
+    .eq("id", EVENT_ID)
+    .single();
 
-      <div class="card">
-        <div class="label">Hours</div>
-        <input id="hours">
-      </div>
+  if (error) {
+    alert("Failed to load event: " + error.message);
+    return;
+  }
 
-      <div class="card">
-        <div class="label">Amount raised (£)</div>
-        <input id="amount">
-        <button class="primary" id="updateAmount" style="margin-top:0.75rem">
-          Update amount
-        </button>
-      </div>
+  state = data;
+  total.textContent = Number(state.total || 0).toLocaleString();
+  amountInput.value = state.amount_raised ?? "";
+}
 
-      <div class="card">
-        <div class="label">Timer</div>
-        <div style="display:flex; gap:0.5rem; margin-top:0.5rem">
-          <button class="primary" id="start">Start</button>
-          <button id="pause">Pause</button>
-          <button id="reset">Reset</button>
-        </div>
-      </div>
+async function updateEvent(patch) {
+  const { error } = await supabase
+    .from("events")
+    .update(patch)
+    .eq("id", EVENT_ID);
 
-      <div class="card">
-        <div class="label">Total points</div>
-        <button class="warn" id="resetPoints">
-          Reset total points
-        </button>
-      </div>
+  if (error) {
+    alert(error.message);
+    throw error;
+  }
+}
 
-    </div>
-  </details>
+async function add(delta) {
+  if (!state) return;
+  const nextTotal = Math.max(0, Number(state.total || 0) + delta);
 
-</div>
+  await updateEvent({
+    total: nextTotal,
+    last_delta: delta
+  });
 
-<script type="module" src="app.js"></script>
+  // Clear & dismiss keyboard nicely
+  manual.value = "";
+  manual.blur();
+}
+
+async function undo() {
+  if (!state) return;
+  const last = Number(state.last_delta || 0);
+  if (!last) return alert("Nothing to undo.");
+
+  if (!confirm(`Undo last entry (${last})?`)) return;
+
+  const nextTotal = Math.max(0, Number(state.total || 0) - last);
+  await updateEvent({
+    total: nextTotal,
+    last_delta: 0
+  });
+}
+
+async function resetPoints() {
+  if (!confirm("Reset total points to 0?")) return;
+
+  // Await it so it actually happens
+  await updateEvent({
+    total: 0,
+    last_delta: 0
+  });
+}
+
+async function saveAmount() {
+  const val = Number(amountInput.value || 0);
+  await updateEvent({ amount_raised: val });
+}
+
+document.querySelectorAll("[data-add]").forEach(btn => {
+  btn.addEventListener("click", () => add(Number(btn.dataset.add)));
+});
+
+addManual.addEventListener("click", () => {
+  const v = Number(manual.value || 0);
+  if (!v) return;
+  add(v);
+});
+
+undoBtn.addEventListener("click", undo);
+resetPointsBtn.addEventListener("click", resetPoints);
+saveAmount.addEventListener("click", saveAmount);
+
+// Realtime updates so the right-hand total always reflects truth
+supabase
+  .channel("events")
+  .on("postgres_changes", { event: "UPDATE", schema: "public", table: "events" }, payload => {
+    state = payload.new;
+    total.textContent = Number(state.total || 0).toLocaleString();
+  })
+  .subscribe();
+
+load();
+</script>
+
 </body>
 </html>
