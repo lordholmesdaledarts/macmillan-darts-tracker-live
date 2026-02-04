@@ -182,10 +182,13 @@ async function undo() {
 
 /* ---------- Event controls ---------- */
 async function saveTargets() {
+  const hours = Number(hoursInput.value || 0);
+
   await updateEvent({
     target: Number(targetInput.value || 0),
-    duration_hours: Number(hoursInput.value || 0),
-    started_at: null   // force display to show full duration
+    duration_hours: hours,
+    duration_minutes: hours * 60,
+    started_at: null
   });
 }
 
@@ -202,9 +205,8 @@ async function pauseTimer() {
 async function resetTimerHandler() {
   if (!confirm("Reset the timer back to the full duration?")) return;
 
-  await updateEvent({
-    started_at: null
-  });
+  // Only rely on started_at; display should derive countdown from started_at + duration
+  await updateEvent({ started_at: null });
 }
 
 async function resetPoints() {
