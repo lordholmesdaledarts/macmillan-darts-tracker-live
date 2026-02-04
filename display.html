@@ -94,7 +94,7 @@ supabase
   })
   .subscribe();
 
-setInterval(render, 60000);
+setInterval(render, 1000);
 
 const { data } = await supabase
   .from("events")
