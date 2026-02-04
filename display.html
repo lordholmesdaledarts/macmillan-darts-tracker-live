@@ -3,21 +3,32 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
+
   <title>Macmillan Cancer Support – Darts Marathon</title>
+
+  <!-- Modern font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+
   <link rel="stylesheet" href="styles.css" />
 </head>
 
 <body class="big display">
 
 <header class="display-header">
-  <img src="macmillan-logo.png" alt="Macmillan Cancer Support" class="logo" />
-  <h1>Macmillan Cancer Support<br>Darts Marathon</h1>
-  <img src="lord-holmesdale-logo.png" alt="Lord Holmesdale" class="logo" />
+  <img src="assets/macmillan-logo.png" alt="Macmillan Cancer Support" class="logo" />
+
+  <h1>
+    Macmillan Cancer Support<br />
+    Darts Marathon
+  </h1>
+
+  <img src="assets/lord-holmesdale-logo.png" alt="Lord Holmesdale" class="logo" />
 </header>
 
 <main class="display-grid">
 
-  <!-- POINTS -->
   <section class="hero-box">
     <div class="label">Points remaining</div>
     <div class="hero-value mono" id="pointsRemaining">—</div>
@@ -26,7 +37,6 @@
     </div>
   </section>
 
-  <!-- TIME -->
   <section class="hero-box">
     <div class="label">Time remaining</div>
     <div class="hero-value mono" id="timeRemaining">—</div>
@@ -38,17 +48,14 @@
 </main>
 
 <footer class="display-footer">
-
   <div class="raised">
     Amount raised:
     <strong>£<span id="amountRaised">0</span></strong>
   </div>
 
-  <!-- Progress toward POINTS TARGET -->
   <div class="progress">
     <div class="bar" id="progressBar"></div>
   </div>
-
 </footer>
 
 <script type="module">
@@ -59,45 +66,32 @@ let state = null;
 function render() {
   if (!state) return;
 
-  /* Points */
   const remainingPoints = Math.max(0, state.target - state.total);
   pointsRemaining.textContent = remainingPoints.toLocaleString();
   pointsTotal.textContent = state.total.toLocaleString();
 
-  /* Time */
   if (state.started_at) {
     const start = new Date(state.started_at).getTime();
-    const durationMs = state.duration_minutes * 60 * 1000;
-    const elapsed = Date.now() - start;
-    const remainingMs = Math.max(0, durationMs - elapsed);
-
-    const hours = Math.floor(remainingMs / 3600000);
-    const mins = Math.floor((remainingMs % 3600000) / 60000);
-
-    timeRemaining.textContent = `${hours}h ${mins}m`;
-  } else {
-    timeRemaining.textContent = "—";
+    const durationMs = state.duration_minutes * 60000;
+    const remainingMs = Math.max(0, durationMs - (Date.now() - start));
+    const h = Math.floor(remainingMs / 3600000);
+    const m = Math.floor((remainingMs % 3600000) / 60000);
+    timeRemaining.textContent = `${h}h ${m}m`;
   }
 
-  /* Amount raised */
   amountRaised.textContent =
     (state.amount_raised || 0).toLocaleString();
 
-  /* Progress bar = POINTS progress */
   const pct = Math.min(100, (state.total / state.target) * 100);
   progressBar.style.width = pct + "%";
 }
 
 supabase
   .channel("events")
-  .on(
-    "postgres_changes",
-    { event: "UPDATE", schema: "public", table: "events" },
-    payload => {
-      state = payload.new;
-      render();
-    }
-  )
+  .on("postgres_changes", { event: "UPDATE", table: "events" }, p => {
+    state = p.new;
+    render();
+  })
   .subscribe();
 
 setInterval(render, 60000);
