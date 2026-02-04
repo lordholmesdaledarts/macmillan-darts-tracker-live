@@ -201,7 +201,9 @@ async function pauseTimer() {
 
 async function resetTimer() {
   if (!confirm("Reset the timer?")) return;
-  await updateEvent({ started_at: null });
+  await updateEvent({
+    started_at: null
+  });
 }
 
 async function resetPoints() {
