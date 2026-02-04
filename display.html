@@ -10,7 +10,7 @@
 <body class="display">
   <div class="wrap display-wrap">
 
-    <!-- Header -->
+    <!-- Header (static statement only) -->
     <header class="display-title">
       <h1>Macmillan Darts</h1>
       <p class="display-sub">
@@ -87,16 +87,18 @@ function formatTimeHM(ms) {
   return `${h}h ${m}m`;
 }
 
-/* ---------- Main render (DATA changes only) ---------- */
+/* ---------- Render (data-driven only) ---------- */
 function render() {
   if (!state) return;
 
   const total = num(state.total);
   const target = num(state.target);
 
-  // Points
+  // Total & target
   pointsTotal.textContent = total.toLocaleString();
   targetPoints.textContent = target.toLocaleString();
+
+  // Remaining
   pointsRemaining.textContent = target
     ? Math.max(0, target - total).toLocaleString()
     : "—";
@@ -107,7 +109,7 @@ function render() {
   progressPct.textContent = `${pct.toFixed(1)}%`;
 }
 
-/* ---------- Timer-only tick (every second) ---------- */
+/* ---------- Timer tick (only time) ---------- */
 function tickTimerOnly() {
   if (!state) return;
 
@@ -123,7 +125,11 @@ function tickTimerOnly() {
   }
 
   const start = new Date(state.started_at).getTime();
-  const remainingMs = Math.max(0, minutes * 60000 - (Date.now() - start));
+  const remainingMs = Math.max(
+    0,
+    minutes * 60000 - (Date.now() - start)
+  );
+
   timeRemaining.textContent = formatTimeHM(remainingMs);
 }
 
