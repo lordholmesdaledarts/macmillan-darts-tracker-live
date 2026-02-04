@@ -10,31 +10,42 @@
 <body class="display">
   <div class="wrap display-wrap">
 
+    <!-- Title -->
     <header class="display-title">
       <h1>Macmillan Darts Marathon</h1>
     </header>
 
+    <!-- Main display -->
     <div class="display-grid">
+
+      <!-- POINTS -->
       <section class="hero-card tall">
         <div class="label">Points remaining</div>
         <div class="hero-value mono" id="pointsRemaining">—</div>
-        <div class="subtle">Total scored: <span id="pointsTotal">0</span></div>
+        <div class="subtle">
+          Total scored: <span id="pointsTotal">0</span>
+        </div>
 
         <div class="progress-wrap">
-          <div class="progress-label">Progress</div>
+          <div class="progress-header">
+            <div class="progress-label">Progress</div>
+            <div class="progress-pct" id="progressPct">0%</div>
+          </div>
+
           <div class="progress">
             <div class="bar" id="bar"></div>
           </div>
         </div>
       </section>
 
+      <!-- TIME -->
       <section class="hero-card tall">
         <div class="label">Time remaining</div>
         <div class="hero-value mono" id="timeRemaining">—</div>
         <div class="subtle">Until end of event</div>
       </section>
-    </div>
 
+    </div>
   </div>
 
 <script type="module">
@@ -42,6 +53,7 @@ import { supabase, EVENT_ID } from "./supabase.js";
 
 let state = null;
 
+/* ---------- helpers ---------- */
 function num(v, fallback = 0) {
   const n = Number(v);
   return Number.isFinite(n) ? n : fallback;
@@ -54,46 +66,54 @@ function getDurationMinutes(s) {
 }
 
 function formatTimeHM(ms) {
-  const h = Math.floor(ms / 3600000);
-  const m = Math.floor((ms % 3600000) / 60000);
+  const clamped = Math.max(0, ms);
+  const h = Math.floor(clamped / 3600000);
+  const m = Math.floor((clamped % 3600000) / 60000);
   return `${h}h ${m}m`;
 }
 
+/* ---------- render ---------- */
 function render() {
   if (!state) return;
 
   const total = num(state.total);
   const target = num(state.target);
 
-  // Points
+  /* Points */
   pointsTotal.textContent = total.toLocaleString();
-  pointsRemaining.textContent = target
-    ? Math.max(0, target - total).toLocaleString()
+  const remaining = target ? Math.max(0, target - total) : null;
+  pointsRemaining.textContent = remaining !== null
+    ? remaining.toLocaleString()
     : "—";
 
-  // Progress
-  bar.style.width = target ? `${Math.min(100, (total / target) * 100)}%` : "0%";
+  /* Progress */
+  const pct = target ? Math.min(100, (total / target) * 100) : 0;
+  bar.style.width = pct + "%";
+  progressPct.textContent = Math.round(pct) + "%";
 
-  // Amount raised
-  amountRaised.textContent = num(state.amount_raised).toLocaleString();
-
-  // Time
+  /* Time */
   const minutes = getDurationMinutes(state);
   if (!minutes) {
     timeRemaining.textContent = "—";
     return;
   }
 
+  // Not started yet → show full duration
   if (!state.started_at) {
     timeRemaining.textContent = formatTimeHM(minutes * 60000);
     return;
   }
 
   const start = new Date(state.started_at).getTime();
-  const remainingMs = Math.max(0, minutes * 60000 - (Date.now() - start));
+  const remainingMs = Math.max(
+    0,
+    minutes * 60000 - (Date.now() - start)
+  );
+
   timeRemaining.textContent = formatTimeHM(remainingMs);
 }
 
+/* ---------- load ---------- */
 async function load() {
   const { data, error } = await supabase
     .from("events")
@@ -102,7 +122,7 @@ async function load() {
     .single();
 
   if (error) {
-    alert(error.message);
+    alert("Display failed to load: " + error.message);
     return;
   }
 
@@ -110,7 +130,7 @@ async function load() {
   render();
 }
 
-// Realtime updates
+/* ---------- realtime ---------- */
 supabase
   .channel("events-display")
   .on(
@@ -123,6 +143,7 @@ supabase
   )
   .subscribe();
 
+/* ---------- init ---------- */
 await load();
 setInterval(render, 1000);
 </script>
