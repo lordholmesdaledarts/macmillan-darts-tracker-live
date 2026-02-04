@@ -3,53 +3,77 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Live Display – Macmillan Darts</title>
+  <title>Live Display – Charity Event</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
+
 <body class="big">
 
 <div class="wrap">
   <section class="card">
+
+    <div class="label">Time remaining</div>
+    <div class="value hero mono" id="time">--:--</div>
+
+    <div class="progress">
+      <div class="bar" id="bar"></div>
+    </div>
+
     <div class="label">Points remaining</div>
-    <div class="value hero mono" id="remaining">—</div>
+    <div class="value mono" id="remaining">—</div>
 
-    <div class="spacer"></div>
-
-    <div class="label">Total points</div>
-    <div class="value mono" id="total">0</div>
   </section>
 </div>
 
 <script type="module">
-  import { supabase, EVENT_ID } from "./supabase.js";
+import { supabase, EVENT_ID } from "./supabase.js";
 
-  const remainingEl = document.getElementById("remaining");
-  const totalEl = document.getElementById("total");
-  const TARGET = 100000;
+let state = null;
 
-  function render(total) {
-    totalEl.textContent = total.toLocaleString();
-    remainingEl.textContent = Math.max(0, TARGET - total).toLocaleString();
-  }
+function tick() {
+  if (!state || !state.started_at) return;
 
-  supabase
-    .channel("events")
-    .on(
-      "postgres_changes",
-      { event: "UPDATE", schema: "public", table: "events" },
-      payload => {
-        render(payload.new.total);
-      }
-    )
-    .subscribe();
+  const start = new Date(state.started_at).getTime();
+  const durationMs = state.duration_minutes * 60 * 1000;
+  const now = Date.now();
+  const elapsed = Math.min(durationMs, now - start);
+  const remaining = Math.max(0, durationMs - elapsed);
 
+  const mins = Math.floor(remaining / 60000);
+  const secs = Math.floor((remaining % 60000) / 1000);
+  time.textContent = `${mins}:${secs.toString().padStart(2, "0")}`;
+}
+
+function render() {
+  if (!state) return;
+
+  remaining.textContent =
+    Math.max(0, state.target - state.total).toLocaleString();
+
+  const pct = Math.min(100, (state.total / state.target) * 100);
+  bar.style.width = pct + "%";
+}
+
+async function load() {
   const { data } = await supabase
     .from("events")
-    .select("total")
+    .select("*")
     .eq("id", EVENT_ID)
     .single();
 
-  if (data) render(data.total);
+  state = data;
+  render();
+}
+
+supabase.channel("events")
+  .on("postgres_changes", { event: "UPDATE", table: "events" }, payload => {
+    state = payload.new;
+    render();
+  })
+  .subscribe();
+
+setInterval(tick, 1000);
+load();
 </script>
 
 </body>
