@@ -3,56 +3,75 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Live Display – Charity Event</title>
+  <title>Macmillan Cancer Support – Darts Marathon</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 
-<body class="big">
+<body class="big display">
 
-<div class="wrap">
-  <section class="card">
+<header class="display-header">
+  <img src="macmillan-logo.png" alt="Macmillan Cancer Support" class="logo" />
+  <h1>Macmillan Cancer Support<br>Darts Marathon</h1>
+  <img src="lord-holmesdale-logo.png" alt="Lord Holmesdale" class="logo" />
+</header>
 
-    <div class="label">Time remaining</div>
-    <div class="value hero mono" id="time">--</div>
+<main class="display-grid">
 
-    <div class="progress">
-      <div class="bar" id="bar"></div>
-    </div>
-
+  <section class="hero-box">
     <div class="label">Points remaining</div>
-    <div class="value mono" id="remaining">—</div>
-
+    <div class="hero-value mono" id="points">—</div>
   </section>
-</div>
+
+  <section class="hero-box">
+    <div class="label">Time remaining</div>
+    <div class="hero-value mono" id="time">—</div>
+  </section>
+
+</main>
+
+<footer class="display-footer">
+  <div class="raised">
+    Amount raised:
+    <strong>£<span id="amount">0</span></strong>
+  </div>
+  <div class="progress">
+    <div class="bar" id="bar"></div>
+  </div>
+</footer>
 
 <script type="module">
 import { supabase, EVENT_ID } from "./supabase.js";
 
-let state = null;
+let state;
 
 function render() {
-  if (!state || !state.started_at) return;
+  if (!state) return;
 
-  const start = new Date(state.started_at).getTime();
-  const durationMs = state.duration_minutes * 60 * 1000;
-  const elapsed = Math.min(durationMs, Date.now() - start);
-  const remainingMs = Math.max(0, durationMs - elapsed);
-
-  const hours = Math.floor(remainingMs / 3600000);
-  const mins = Math.floor((remainingMs % 3600000) / 60000);
-
-  time.textContent = `${hours}h ${mins}m`;
-
-  remaining.textContent =
+  // Points
+  points.textContent =
     Math.max(0, state.target - state.total).toLocaleString();
 
+  // Time
+  if (state.started_at) {
+    const start = new Date(state.started_at).getTime();
+    const durationMs = state.duration_minutes * 60000;
+    const remainingMs = Math.max(0, durationMs - (Date.now() - start));
+    const h = Math.floor(remainingMs / 3600000);
+    const m = Math.floor((remainingMs % 3600000) / 60000);
+    time.textContent = `${h}h ${m}m`;
+  }
+
+  // Amount raised
+  amount.textContent = (state.amount_raised || 0).toLocaleString();
+
+  // Progress bar (points)
   bar.style.width =
     Math.min(100, (state.total / state.target) * 100) + "%";
 }
 
 supabase.channel("events")
-  .on("postgres_changes", { event: "UPDATE", table: "events" }, payload => {
-    state = payload.new;
+  .on("postgres_changes", { event: "UPDATE", table: "events" }, p => {
+    state = p.new;
     render();
   })
   .subscribe();
