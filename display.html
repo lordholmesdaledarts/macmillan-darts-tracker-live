@@ -67,6 +67,9 @@
 <script type="module">
 import { supabase, EVENT_ID } from "./supabase.js";
 
+/* 🔍 DEBUG: confirm which event this display is listening to */
+console.log("DISPLAY EVENT_ID:", EVENT_ID);
+
 let state = null;
 
 /* ---------- Helpers ---------- */
