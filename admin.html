@@ -3,40 +3,72 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Admin – Macmillan Darts</title>
+  <title>Admin Control – Macmillan Darts</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
+
 <body>
 
 <div class="wrap">
+  <!-- Header -->
   <header class="title">
     <h1>Admin Control</h1>
-    <p class="sub">Live score entry</p>
+    <p class="sub">Live score entry · Charity event</p>
   </header>
 
-  <section class="card">
-    <div class="value hero mono" id="total">0</div>
-    <div class="label">Total points</div>
+  <!-- Main cards -->
+  <div class="grid">
 
-    <div class="spacer"></div>
+    <!-- Total points card -->
+    <section class="card">
+      <div class="label">Total points</div>
+      <div class="value hero mono" id="total">0</div>
+    </section>
 
-    <div class="quick">
-      <button class="chip" data-add="500">+500</button>
-      <button class="chip" data-add="800">+800</button>
-      <button class="chip" data-add="1000">+1000</button>
-    </div>
+    <!-- Quick add card -->
+    <section class="card">
+      <div class="label">Quick add</div>
 
-    <div class="spacer"></div>
+      <div class="quick">
+        <button class="chip" data-add="26">+26</button>
+        <button class="chip" data-add="41">+41</button>
+        <button class="chip" data-add="45">+45</button>
+        <button class="chip" data-add="60">+60</button>
+        <button class="chip" data-add="85">+85</button>
+        <button class="chip" data-add="100">+100</button>
+        <button class="chip" data-add="140">+140</button>
+        <button class="chip" data-add="180">+180</button>
+        <button class="chip" data-add="301">+301</button>
+        <button class="chip" data-add="501">+501</button>
+      </div>
+    </section>
 
-    <div class="row">
-      <input id="manual" type="number" inputmode="numeric" placeholder="Custom amount" />
-      <button class="primary" id="addManual">Add</button>
-    </div>
+    <!-- Manual entry card -->
+    <section class="card">
+      <div class="label">Manual entry</div>
 
-    <div class="spacer"></div>
+      <div class="row">
+        <input
+          id="manual"
+          type="number"
+          inputmode="numeric"
+          placeholder="Score (e.g. 500)"
+        />
+        <button class="primary" id="addManual">Add</button>
+      </div>
+    </section>
 
-    <button class="warn" id="undoBtn">Undo last</button>
-  </section>
+    <!-- Undo card -->
+    <section class="card warn-card">
+      <div class="label">Correction</div>
+      <button class="warn full" id="undoBtn">Undo last entry</button>
+    </section>
+
+  </div>
+
+  <p class="footer-note">
+    Admin only · Updates appear instantly on the big screen
+  </p>
 </div>
 
 <script type="module">
@@ -51,7 +83,9 @@
       .eq("id", EVENT_ID)
       .single();
 
-    if (data) totalEl.textContent = data.total.toLocaleString();
+    if (data) {
+      totalEl.textContent = data.total.toLocaleString();
+    }
   }
 
   async function add(delta) {
@@ -61,6 +95,8 @@
       .eq("id", EVENT_ID)
       .single();
 
+    if (!data) return;
+
     const next = Math.max(0, data.total + delta);
 
     await supabase
@@ -69,28 +105,37 @@
       .eq("id", EVENT_ID);
   }
 
+  // Quick buttons
   document.querySelectorAll("[data-add]").forEach(btn => {
     btn.onclick = () => add(Number(btn.dataset.add));
   });
 
+  // Manual add
   document.getElementById("addManual").onclick = () => {
-    const val = Number(document.getElementById("manual").value);
-    if (val) add(val);
-    document.getElementById("manual").value = "";
+    const input = document.getElementById("manual");
+    const val = Number(input.value);
+    if (val > 0) {
+      add(val);
+      input.value = "";
+      input.blur();
+    }
   };
 
-  document.getElementById("undoBtn").onclick = async () => {
-    if (!confirm("Undo last entry?")) return;
-    await add(-500); // simple undo for now (can improve later)
+  // Undo (simple, safe version for now)
+  document.getElementById("undoBtn").onclick = () => {
+    if (!confirm("Undo the last entry?")) return;
+    add(-500);
   };
 
+  // Realtime updates
   supabase
     .channel("events")
     .on(
       "postgres_changes",
       { event: "UPDATE", schema: "public", table: "events" },
       payload => {
-        totalEl.textContent = payload.new.total.toLocaleString();
+        totalEl.textContent =
+          payload.new.total.toLocaleString();
       }
     )
     .subscribe();
