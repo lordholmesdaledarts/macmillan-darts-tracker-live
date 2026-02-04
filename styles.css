@@ -1,185 +1,29 @@
 /* =========================
-   GLOBAL DESIGN SYSTEM
-   Matches original standalone app
+   DISPLAY TWEAKS
    ========================= */
 
-* {
-  box-sizing: border-box;
+.hero-card.tall {
+  min-height: 360px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
-body {
-  margin: 0;
-  font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont,
-    "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  background:
-    radial-gradient(1200px 600px at top, #0f2f3a 0%, #020617 70%);
-  color: #e5e7eb;
+.progress-wrap {
+  margin-top: 1.25rem;
 }
 
-.mono {
-  font-variant-numeric: tabular-nums;
-}
-
-.wrap {
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 2rem;
-}
-
-/* =========================
-   CARDS
-   ========================= */
-
-.card,
-.hero-card {
-  background:
-    linear-gradient(
-      180deg,
-      rgba(18, 60, 70, 0.9),
-      rgba(10, 30, 40, 0.9)
-    );
-  border-radius: 22px;
-  padding: 1.75rem;
-  border: 1px solid rgba(80, 200, 180, 0.15);
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.05),
-    0 20px 50px rgba(0,0,0,0.45);
-}
-
-/* =========================
-   TYPOGRAPHY
-   ========================= */
-
-.label {
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+.progress-label {
+  text-align: center;
   font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   opacity: 0.75;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.4rem;
 }
 
-.hero-value {
-  font-size: 4.5rem;
-  font-weight: 700;
-  line-height: 1;
-}
-
-.subtle {
-  opacity: 0.7;
-  font-size: 0.9rem;
-}
-
-/* =========================
-   BUTTONS & INPUTS
-   ========================= */
-
-input {
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.15);
-  border-radius: 14px;
-  padding: 0.75rem 1rem;
-  color: #fff;
-  font-size: 1rem;
-}
-
-button {
-  border: none;
-  border-radius: 999px;
-  padding: 0.65rem 1.1rem;
+.amount.big {
+  margin-top: 2.5rem;
+  font-size: 2rem;
   font-weight: 600;
-  cursor: pointer;
-  background: rgba(255,255,255,0.08);
-  color: #fff;
-}
-
-button.primary {
-  background: linear-gradient(180deg, #39d98a, #1fbf75);
-  color: #022c22;
-}
-
-button.warn {
-  background: linear-gradient(180deg, #fbbf24, #f59e0b);
-  color: #3b1d00;
-}
-
-button:active {
-  transform: translateY(1px);
-}
-
-/* =========================
-   PROGRESS BAR (SLIM + SLICK)
-   ========================= */
-
-.progress {
-  height: 8px;
-  width: 60%;
-  margin: 1rem auto 0;
-  background: rgba(255,255,255,0.15);
-  border-radius: 999px;
-  overflow: hidden;
-}
-
-.progress .bar {
-  height: 100%;
-  background: linear-gradient(90deg, #39d98a, #6ee7b7);
-  width: 0%;
-  transition: width 0.4s ease;
-}
-
-/* =========================
-   ADMIN LAYOUT
-   ========================= */
-
-.admin-grid {
-  display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: 2rem;
-}
-
-.entry-row {
-  display: flex;
-  gap: 0.75rem;
-  align-items: center;
-}
-
-.entry-row input {
-  flex: 1;
-  font-size: 1.1rem;
-}
-
-.quick-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-top: 1rem;
-}
-
-details {
-  margin-top: 1.5rem;
-}
-
-/* =========================
-   DISPLAY MODE
-   ========================= */
-
-body.display .wrap {
-  max-width: 1600px;
-}
-
-.display-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 2.5rem;
-}
-
-.hero-card {
-  text-align: center;
-  padding: 2.5rem;
-}
-
-.amount {
-  text-align: center;
-  margin-top: 2rem;
-  font-size: 1.4rem;
-  font-weight: 500;
 }
