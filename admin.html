@@ -199,8 +199,9 @@ async function pauseTimer() {
   await updateEvent({ started_at: null });
 }
 
-async function resetTimer() {
-  if (!confirm("Reset the timer?")) return;
+async function resetTimerHandler() {
+  if (!confirm("Reset the timer back to the full duration?")) return;
+
   await updateEvent({
     started_at: null
   });
@@ -231,7 +232,7 @@ undoBtn.onclick = undo;
 saveTargets.onclick = saveTargets;
 startTimer.onclick = startTimer;
 pauseTimer.onclick = pauseTimer;
-resetTimer.onclick = resetTimer;
+resetTimer.onclick = resetTimerHandler;
 resetPointsBtn.onclick = resetPoints;
 saveAmount.onclick = saveAmount;
 
