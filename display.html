@@ -62,20 +62,10 @@
 
   </div>
 
-  <!-- 🎉 CELEBRATION OVERLAY -->
-  <div id="celebration" class="celebration hidden">
-    <div class="celebration-card">
-      <h1>🎉 Target achieved!</h1>
-      <p>You smashed the goal</p>
-    </div>
-  </div>
-
 <script type="module">
 import { supabase, EVENT_ID } from "./supabase.js";
 
 let state = null;
-let celebrationShown = false;
-let celebrationTimeout = null;
 
 /* ---------- Helpers ---------- */
 function num(v, fallback = 0) {
@@ -94,25 +84,6 @@ function formatTimeHM(ms) {
   const m = Math.floor((ms % 3600000) / 60000);
   return `${h}h ${m}m`;
 }
-
-/* ---------- Celebration ---------- */
-function showCelebration() {
-  if (celebrationShown) return;
-
-  celebrationShown = true;
-  celebration.classList.remove("hidden");
-
-  celebrationTimeout = setTimeout(hideCelebration, 10000);
-}
-
-function hideCelebration() {
-  celebration.classList.add("hidden");
-}
-
-celebration.addEventListener("click", () => {
-  clearTimeout(celebrationTimeout);
-  hideCelebration();
-});
 
 /* ---------- Render ---------- */
 function render() {
@@ -133,11 +104,6 @@ function render() {
   const pct = target ? Math.min(100, (total / target) * 100) : 0;
   bar.style.width = pct + "%";
   progressPct.textContent = `${pct.toFixed(1)}%`;
-
-  // 🎉 Trigger celebration
-  if (target && remaining === 0) {
-    showCelebration();
-  }
 
   // Time
   const minutes = getDurationMinutes(state);
