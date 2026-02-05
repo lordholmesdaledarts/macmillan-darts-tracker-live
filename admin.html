@@ -183,28 +183,36 @@ async function undo() {
 
 /* ---------- CONTROLS ---------- */
 async function saveTargets() {
-  const hours = Number(hoursInput.value || 0);
-
   await updateEvent({
     target: Number(targetInput.value || 0),
-    duration_hours: hours,
-    duration_minutes: hours * 60
+    duration_hours: Number(hoursInput.value || 0),
+    duration_minutes: Number(hoursInput.value || 0) * 60
   });
 }
 
 async function startTimer() {
   await updateEvent({
-    started_at: new Date().toISOString()
+    started_at: new Date().toISOString(),
+    paused_at: null,
+    is_running: true
   });
 }
 
 async function pauseTimer() {
-  await updateEvent({ started_at: null });
+  await updateEvent({
+    paused_at: new Date().toISOString(),
+    is_running: false
+  });
 }
 
 async function resetTimerHandler() {
-  if (!confirm("Reset timer?")) return;
-  await updateEvent({ started_at: null });
+  if (!confirm("Reset the timer back to the full duration?")) return;
+
+  await updateEvent({
+    started_at: null,
+    paused_at: null,
+    is_running: false
+  });
 }
 
 async function resetPoints() {
