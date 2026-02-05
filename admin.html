@@ -23,7 +23,12 @@
         <div class="label">Score entry</div>
 
         <div class="entry-wide">
-          <input id="manual" type="number" inputmode="numeric" placeholder="Score" />
+          <input
+            id="manual"
+            type="number"
+            inputmode="numeric"
+            placeholder="Score"
+          />
           <button class="primary" id="addManual">Add</button>
           <button class="warn" id="undoBtn">Undo</button>
         </div>
@@ -65,19 +70,38 @@
 
         <!-- Targets -->
         <section class="card">
-          <div class="label">Event targets</div>
+          <div class="label">Event targets (hard reset)</div>
 
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem; margin-top:0.5rem">
-            <input id="targetInput" type="number" placeholder="Target points" />
-            <input id="hoursInput" type="number" placeholder="Hours" />
+          <div
+            style="
+              display:grid;
+              grid-template-columns:1fr 1fr;
+              gap:0.75rem;
+              margin-top:0.5rem
+            "
+          >
+            <input
+              id="targetInput"
+              type="number"
+              placeholder="Target points"
+            />
+            <input
+              id="hoursInput"
+              type="number"
+              placeholder="Hours"
+            />
           </div>
 
-          <button class="primary full" id="saveTargets" style="margin-top:0.9rem">
-            Save targets
+          <button
+            class="primary full"
+            id="saveTargets"
+            style="margin-top:0.9rem"
+          >
+            Save targets & start new event
           </button>
 
           <p class="subtle" style="margin-top:0.6rem">
-            Used for progress and countdown.
+            This resets score and timer.
           </p>
         </section>
 
@@ -173,17 +197,32 @@ async function undo() {
   });
 }
 
-/* ---------- Targets ---------- */
+/* ---------- HARD RESET: Save targets ---------- */
 async function saveTargetsHandler() {
   const target = Number(targetInput.value || 0);
   const hours = Number(hoursInput.value || 0);
 
-  console.log("🎯 Save targets clicked", { target, hours });
+  if (!target || !hours) {
+    alert("Please enter both target points and hours.");
+    return;
+  }
+
+  if (
+    !confirm(
+      "Start a new event?\n\nThis will reset:\n• Total points\n• Timer\n• Progress"
+    )
+  ) {
+    return;
+  }
+
+  console.log("🎯 Starting fresh event", { target, hours });
 
   await updateEvent({
     target,
     duration_hours: hours,
     duration_minutes: hours * 60,
+    total: 0,
+    last_delta: 0,
     started_at: null
   });
 }
@@ -198,7 +237,7 @@ async function startTimerHandler() {
 }
 
 async function resetTimerHandler() {
-  if (!confirm("Reset the timer back to the full duration?")) return;
+  if (!confirm("Reset the timer back to full duration?")) return;
 
   await updateEvent({
     started_at: null
@@ -220,7 +259,9 @@ function updateTimerStatus() {
 
 /* ---------- Wiring ---------- */
 document.querySelectorAll("[data-add]").forEach(btn =>
-  btn.addEventListener("click", () => add(Number(btn.dataset.add)))
+  btn.addEventListener("click", () =>
+    add(Number(btn.dataset.add))
+  )
 );
 
 addManual.addEventListener("click", () => {
