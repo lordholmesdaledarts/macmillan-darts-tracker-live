@@ -15,20 +15,13 @@
       <p class="sub">Admin control</p>
     </header>
 
-    <!-- ================= TOP ROW ================= -->
     <div class="admin-top">
 
-      <!-- Score entry -->
       <section class="card">
         <div class="label">Score entry</div>
 
         <div class="entry-wide">
-          <input
-            id="manual"
-            type="number"
-            inputmode="numeric"
-            placeholder="Score"
-          />
+          <input id="manual" type="number" placeholder="Score" />
           <button class="primary" id="addManual">Add</button>
           <button class="warn" id="undoBtn">Undo</button>
         </div>
@@ -40,81 +33,43 @@
           <button class="chip" data-add="180">+180</button>
           <button class="chip" data-add="301">+301</button>
           <button class="chip" data-add="501">+501</button>
-          <button class="chip" data-add="1000">+1000</button>
-          <button class="chip" data-add="969">+969</button>
-          <button class="chip" data-add="961">+961</button>
-          <button class="chip" data-add="981">+981</button>
         </div>
-
-        <p class="subtle" style="margin-top:0.9rem">
-          Tip: type a number → Add. Undo reverses the last added amount.
-        </p>
       </section>
 
-      <!-- Total points -->
       <section class="card">
         <div class="label">Total points</div>
         <div class="hero-value mono" id="total">0</div>
-        <p class="subtle" style="margin-top:0.75rem">
-          Live value used on the display screen.
-        </p>
       </section>
 
     </div>
 
-    <!-- ================= EVENT SETUP ================= -->
     <details class="admin-settings" open>
       <summary>Event setup</summary>
 
       <div class="settings-grid">
 
-        <!-- Targets -->
         <section class="card">
           <div class="label">Event targets (hard reset)</div>
 
-          <div
-            style="
-              display:grid;
-              grid-template-columns:1fr 1fr;
-              gap:0.75rem;
-              margin-top:0.5rem
-            "
-          >
-            <input
-              id="targetInput"
-              type="number"
-              placeholder="Target points"
-            />
-            <input
-              id="hoursInput"
-              type="number"
-              placeholder="Hours"
-            />
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem">
+            <input id="targetInput" type="number" placeholder="Target points" />
+            <input id="hoursInput" type="number" placeholder="Hours" />
           </div>
 
-          <button
-            class="primary full"
-            id="saveTargets"
-            style="margin-top:0.9rem"
-          >
+          <button class="primary full" id="saveTargets" style="margin-top:.9rem">
             Save targets & start new event
           </button>
-
-          <p class="subtle" style="margin-top:0.6rem">
-            This resets score and timer.
-          </p>
         </section>
 
-        <!-- Timer -->
         <section class="card">
           <div class="label">Timer</div>
 
-          <div style="display:flex; gap:0.75rem; margin-top:0.75rem">
+          <div style="display:flex;gap:.75rem;margin-top:.75rem">
             <button class="primary" id="startTimer">Start</button>
             <button class="warn" id="resetTimer">Reset</button>
           </div>
 
-          <p class="subtle" id="timerStatus" style="margin-top:0.75rem">
+          <p class="subtle" id="timerStatus" style="margin-top:.75rem">
             Timer not started
           </p>
         </section>
@@ -127,11 +82,8 @@
 <script type="module">
 import { supabase, EVENT_ID } from "./supabase.js";
 
-console.log("🟢 Admin loaded for event:", EVENT_ID);
-
 let state = null;
 
-/* ---------- Load ---------- */
 async function load() {
   const { data, error } = await supabase
     .from("events")
@@ -140,7 +92,7 @@ async function load() {
     .single();
 
   if (error) {
-    alert("Failed to load event: " + error.message);
+    alert(error.message);
     return;
   }
 
@@ -148,21 +100,23 @@ async function load() {
   syncUI();
 }
 
-/* ---------- Sync UI ---------- */
 function syncUI() {
-  if (!state) return;
-
   total.textContent = Number(state.total || 0).toLocaleString();
   targetInput.value = state.target ?? "";
   hoursInput.value = state.duration_hours ?? "";
 
-  updateTimerStatus();
+  if (state.started_at) {
+    timerStatus.textContent = "⏱ Timer running";
+    timerStatus.style.color = "#39d98a";
+    startTimer.textContent = "Running…";
+  } else {
+    timerStatus.textContent = "Timer not started";
+    timerStatus.style.color = "";
+    startTimer.textContent = "Start";
+  }
 }
 
-/* ---------- DB update ---------- */
 async function updateEvent(patch) {
-  console.log("⬆️ Updating event:", patch);
-
   const { data, error } = await supabase
     .from("events")
     .update(patch)
@@ -170,52 +124,20 @@ async function updateEvent(patch) {
     .select();
 
   if (error) {
-    console.error("❌ Update failed:", error);
     alert(error.message);
     return;
   }
 
-  console.log("✅ Update success:", data);
+  // 🔑 THIS IS THE FIX
+  state = data[0];
+  syncUI();
 }
 
-/* ---------- Scoring ---------- */
-async function add(delta) {
-  if (!state) return;
-
-  await updateEvent({
-    total: (state.total || 0) + delta,
-    last_delta: delta
-  });
-}
-
-async function undo() {
-  if (!state?.last_delta) return alert("Nothing to undo.");
-
-  await updateEvent({
-    total: Math.max(0, state.total - state.last_delta),
-    last_delta: 0
-  });
-}
-
-/* ---------- HARD RESET: Save targets ---------- */
 async function saveTargetsHandler() {
-  const target = Number(targetInput.value || 0);
-  const hours = Number(hoursInput.value || 0);
+  const target = Number(targetInput.value);
+  const hours = Number(hoursInput.value);
 
-  if (!target || !hours) {
-    alert("Please enter both target points and hours.");
-    return;
-  }
-
-  if (
-    !confirm(
-      "Start a new event?\n\nThis will reset:\n• Total points\n• Timer\n• Progress"
-    )
-  ) {
-    return;
-  }
-
-  console.log("🎯 Starting fresh event", { target, hours });
+  if (!confirm("Start a new event? This resets score and timer.")) return;
 
   await updateEvent({
     target,
@@ -227,45 +149,36 @@ async function saveTargetsHandler() {
   });
 }
 
-/* ---------- Timer ---------- */
 async function startTimerHandler() {
-  console.log("⏱ Start timer clicked");
-
   await updateEvent({
     started_at: new Date().toISOString()
   });
 }
 
 async function resetTimerHandler() {
-  if (!confirm("Reset the timer back to full duration?")) return;
+  await updateEvent({ started_at: null });
+}
 
+async function add(delta) {
   await updateEvent({
-    started_at: null
+    total: (state.total || 0) + delta,
+    last_delta: delta
   });
 }
 
-function updateTimerStatus() {
-  if (!state?.started_at) {
-    timerStatus.textContent = "Timer not started";
-    timerStatus.style.color = "";
-    startTimer.textContent = "Start";
-    return;
-  }
-
-  timerStatus.textContent = "⏱ Timer running";
-  timerStatus.style.color = "#39d98a";
-  startTimer.textContent = "Running…";
+async function undo() {
+  await updateEvent({
+    total: Math.max(0, state.total - state.last_delta),
+    last_delta: 0
+  });
 }
 
-/* ---------- Wiring ---------- */
 document.querySelectorAll("[data-add]").forEach(btn =>
-  btn.addEventListener("click", () =>
-    add(Number(btn.dataset.add))
-  )
+  btn.addEventListener("click", () => add(Number(btn.dataset.add)))
 );
 
 addManual.addEventListener("click", () => {
-  const v = Number(manual.value || 0);
+  const v = Number(manual.value);
   if (v) add(v);
 });
 
@@ -273,19 +186,6 @@ undoBtn.addEventListener("click", undo);
 saveTargets.addEventListener("click", saveTargetsHandler);
 startTimer.addEventListener("click", startTimerHandler);
 resetTimer.addEventListener("click", resetTimerHandler);
-
-/* ---------- Realtime sync ---------- */
-supabase
-  .channel("events-admin")
-  .on(
-    "postgres_changes",
-    { event: "UPDATE", schema: "public", table: "events" },
-    payload => {
-      state = payload.new;
-      syncUI();
-    }
-  )
-  .subscribe();
 
 load();
 </script>
