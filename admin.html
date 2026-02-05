@@ -15,7 +15,7 @@
       <p class="sub">Admin control</p>
     </header>
 
-    <!-- TOP ROW -->
+    <!-- ================= TOP ROW ================= -->
     <div class="admin-top">
 
       <!-- Score entry -->
@@ -57,7 +57,7 @@
 
     </div>
 
-    <!-- EVENT SETUP -->
+    <!-- ================= EVENT SETUP ================= -->
     <details class="admin-settings" open>
       <summary>Event setup</summary>
 
@@ -85,14 +85,13 @@
         <section class="card">
           <div class="label">Timer</div>
 
-          <div style="display:flex; gap:0.6rem; margin-top:0.75rem">
+          <div style="display:flex; gap:0.75rem; margin-top:0.75rem">
             <button class="primary" id="startTimer">Start</button>
-            <button id="pauseTimer">Pause</button>
-            <button id="resetTimer">Reset</button>
+            <button class="warn" id="resetTimer">Reset</button>
           </div>
 
-          <p class="subtle" style="margin-top:0.6rem">
-            Controls the event countdown.
+          <p class="subtle" id="timerStatus" style="margin-top:0.75rem">
+            Timer not started
           </p>
         </section>
 
@@ -122,9 +121,18 @@ async function load() {
   }
 
   state = data;
+  syncUI();
+}
+
+/* ---------- Sync UI ---------- */
+function syncUI() {
+  if (!state) return;
+
   total.textContent = Number(state.total || 0).toLocaleString();
   targetInput.value = state.target ?? "";
   hoursInput.value = state.duration_hours ?? "";
+
+  updateTimerStatus();
 }
 
 /* ---------- DB update ---------- */
@@ -189,18 +197,30 @@ async function startTimerHandler() {
   });
 }
 
-async function pauseTimerHandler() {
-  await updateEvent({ started_at: null });
-}
-
 async function resetTimerHandler() {
-  if (!confirm("Reset timer back to full duration?")) return;
-  await updateEvent({ started_at: null });
+  if (!confirm("Reset the timer back to the full duration?")) return;
+
+  await updateEvent({
+    started_at: null
+  });
 }
 
-/* ---------- Wiring (IMPORTANT) ---------- */
-document.querySelectorAll("[data-add]").forEach(b =>
-  b.addEventListener("click", () => add(Number(b.dataset.add)))
+function updateTimerStatus() {
+  if (!state?.started_at) {
+    timerStatus.textContent = "Timer not started";
+    timerStatus.style.color = "";
+    startTimer.textContent = "Start";
+    return;
+  }
+
+  timerStatus.textContent = "⏱ Timer running";
+  timerStatus.style.color = "#39d98a";
+  startTimer.textContent = "Running…";
+}
+
+/* ---------- Wiring ---------- */
+document.querySelectorAll("[data-add]").forEach(btn =>
+  btn.addEventListener("click", () => add(Number(btn.dataset.add)))
 );
 
 addManual.addEventListener("click", () => {
@@ -211,7 +231,6 @@ addManual.addEventListener("click", () => {
 undoBtn.addEventListener("click", undo);
 saveTargets.addEventListener("click", saveTargetsHandler);
 startTimer.addEventListener("click", startTimerHandler);
-pauseTimer.addEventListener("click", pauseTimerHandler);
 resetTimer.addEventListener("click", resetTimerHandler);
 
 /* ---------- Realtime sync ---------- */
@@ -222,9 +241,7 @@ supabase
     { event: "UPDATE", schema: "public", table: "events" },
     payload => {
       state = payload.new;
-      total.textContent = Number(state.total || 0).toLocaleString();
-      targetInput.value = state.target ?? "";
-      hoursInput.value = state.duration_hours ?? "";
+      syncUI();
     }
   )
   .subscribe();
