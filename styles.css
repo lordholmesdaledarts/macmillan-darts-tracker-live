@@ -1,40 +1,299 @@
-/* ===== Celebration overlay ===== */
+/* =========================================================
+   GLOBAL RESET + BASE
+   ========================================================= */
 
-.celebration {
-  position: fixed;
-  inset: 0;
-  background: rgba(2, 6, 23, 0.92);
-  backdrop-filter: blur(6px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 9999;
+* {
+  box-sizing: border-box;
 }
 
-.celebration.hidden {
-  display: none;
+html, body {
+  margin: 0;
+  padding: 0;
 }
 
-.celebration-card {
-  background: linear-gradient(
-    180deg,
-    rgba(18, 60, 70, 0.95),
-    rgba(10, 30, 40, 0.95)
-  );
-  border-radius: 28px;
-  padding: 4rem 5rem;
-  text-align: center;
+body {
+  font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  color: #e5e7eb;
+  background:
+    radial-gradient(1200px 600px at top, #0f2f3a 0%, #020617 70%);
+}
+
+/* =========================================================
+   LAYOUT
+   ========================================================= */
+
+.wrap {
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 2.5rem;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1.75rem;
+  margin-top: 1.75rem;
+}
+
+/* =========================================================
+   TYPOGRAPHY
+   ========================================================= */
+
+h1, h2, h3 {
+  margin: 0;
+  font-weight: 600;
+}
+
+.label {
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.8rem;
+  opacity: 0.75;
+  margin-bottom: 0.75rem;
+}
+
+.subtle {
+  font-size: 0.95rem;
+  opacity: 0.75;
+}
+
+.mono {
+  font-variant-numeric: tabular-nums;
+}
+
+/* =========================================================
+   CARDS
+   ========================================================= */
+
+.card,
+.hero-card {
+  background:
+    linear-gradient(
+      180deg,
+      rgba(18, 60, 70, 0.92),
+      rgba(10, 30, 40, 0.92)
+    );
+  border-radius: 26px;
+  padding: 2rem;
+  border: 1px solid rgba(80, 200, 180, 0.18);
   box-shadow:
-    0 40px 80px rgba(0,0,0,0.6),
-    inset 0 1px 0 rgba(255,255,255,0.08);
+    inset 0 1px 0 rgba(255,255,255,0.06),
+    0 24px 60px rgba(0,0,0,0.45);
+  position: relative;
 }
 
-.celebration-card h1 {
-  font-size: 4rem;
-  margin-bottom: 1rem;
+.hero-card {
+  padding: 3rem;
+  text-align: center;
 }
 
-.celebration-card p {
-  font-size: 1.6rem;
-  opacity: 0.85;
+/* =========================================================
+   VALUES
+   ========================================================= */
+
+.hero-value {
+  font-size: 6rem;
+  font-weight: 700;
+  line-height: 1.05;
+  margin-bottom: 1.25rem;
+}
+
+.secondary-value {
+  font-size: 2.4rem;
+  font-weight: 600;
+}
+
+/* =========================================================
+   DISPLAY MODE
+   ========================================================= */
+
+body.display .wrap {
+  max-width: 1800px;
+}
+
+.display-title {
+  margin-bottom: 2.5rem;
+}
+
+.display-title h1 {
+  font-size: 2.6rem;
+  margin-bottom: 0.5rem;
+}
+
+.display-sub {
+  font-size: 1.1rem;
+  opacity: 0.8;
+}
+
+/* Two-row layout */
+.display-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3rem;
+}
+
+.primary-grid {
+  margin-bottom: 3rem; /* IMPORTANT spacing between rows */
+}
+
+/* =========================================================
+   PROGRESS BAR
+   ========================================================= */
+
+.progress-wrap {
+  margin-top: 1.75rem;
+}
+
+.progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.progress-label {
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  opacity: 0.75;
+}
+
+.progress-pct {
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.progress {
+  height: 12px;
+  width: 100%;
+  background: rgba(255,255,255,0.18);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.progress.big {
+  height: 14px;
+}
+
+.progress .bar {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #39d98a, #6ee7b7);
+  transition: width 0.4s ease;
+  box-shadow: 0 0 14px rgba(57, 217, 138, 0.45);
+}
+
+/* =========================================================
+   ADMIN MODE
+   ========================================================= */
+
+body.admin .wrap {
+  max-width: 1400px;
+}
+
+header.title {
+  margin-bottom: 2rem;
+}
+
+header.title h1 {
+  font-size: 2.2rem;
+}
+
+header.title .sub {
+  margin-top: 0.25rem;
+  font-size: 0.95rem;
+  opacity: 0.75;
+}
+
+.admin-top {
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr;
+  gap: 2rem;
+  margin-top: 1.5rem;
+}
+
+.entry-wide {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 0.9rem;
+  align-items: center;
+  margin-top: 1rem;
+}
+
+.quick-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 1.25rem;
+}
+
+/* =========================================================
+   INPUTS & BUTTONS
+   ========================================================= */
+
+input {
+  width: 100%;
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 16px;
+  padding: 0.8rem 1rem;
+  color: #fff;
+  font-size: 1rem;
+}
+
+input::placeholder {
+  color: rgba(255,255,255,0.5);
+}
+
+button {
+  border: none;
+  border-radius: 999px;
+  padding: 0.7rem 1.3rem;
+  font-weight: 600;
+  cursor: pointer;
+  background: rgba(255,255,255,0.1);
+  color: #fff;
+}
+
+button.primary {
+  background: linear-gradient(180deg, #39d98a, #1fbf75);
+  color: #022c22;
+}
+
+button.warn {
+  background: linear-gradient(180deg, #fbbf24, #f59e0b);
+  color: #3b1d00;
+}
+
+button.full {
+  width: 100%;
+}
+
+button:active {
+  transform: translateY(1px);
+}
+
+/* =========================================================
+   RESPONSIVE SAFETY (PHONE → TV CASTING)
+   ========================================================= */
+
+@media (max-width: 1100px) {
+  .display-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .hero-value {
+    font-size: 5rem;
+  }
+}
+
+@media (max-width: 700px) {
+  .hero-value {
+    font-size: 4.2rem;
+  }
+
+  .display-title h1 {
+    font-size: 2.1rem;
+  }
 }
