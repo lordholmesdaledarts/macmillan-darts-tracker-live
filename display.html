@@ -23,7 +23,7 @@
       <section class="hero-card">
         <div class="label">Points remaining</div>
         <div class="hero-value mono" id="pointsRemaining">—</div>
-        <div class="subtle">
+        <div class="subtle" style="margin-top:0.75rem">
           Target: <span id="targetPoints">0</span>
         </div>
       </section>
@@ -31,7 +31,9 @@
       <section class="hero-card">
         <div class="label">Time remaining</div>
         <div class="hero-value mono" id="timeRemaining">—</div>
-        <div class="subtle" id="timerStatus">Timer not started</div>
+        <div class="subtle" style="margin-top:0.75rem">
+          Until end of event
+        </div>
       </section>
     </div>
 
@@ -60,12 +62,22 @@
 
   </div>
 
+  <!-- 🎉 CELEBRATION OVERLAY -->
+  <div id="celebration" class="celebration hidden">
+    <div class="celebration-card">
+      <h1>🎉 Target achieved!</h1>
+      <p>You smashed the goal</p>
+    </div>
+  </div>
+
 <script type="module">
 import { supabase, EVENT_ID } from "./supabase.js";
 
 let state = null;
+let celebrationShown = false;
+let celebrationTimeout = null;
 
-/* ---------- helpers ---------- */
+/* ---------- Helpers ---------- */
 function num(v, fallback = 0) {
   const n = Number(v);
   return Number.isFinite(n) ? n : fallback;
@@ -77,80 +89,109 @@ function getDurationMinutes(s) {
   return 0;
 }
 
-function formatTimeHMS(ms) {
-  const clamped = Math.max(0, ms);
-  const h = Math.floor(clamped / 3600000);
-  const m = Math.floor((clamped % 3600000) / 60000);
-  const s = Math.floor((clamped % 60000) / 1000);
-  return `${h}h ${m}m ${s}s`;
+function formatTimeHM(ms) {
+  const h = Math.floor(ms / 3600000);
+  const m = Math.floor((ms % 3600000) / 60000);
+  return `${h}h ${m}m`;
 }
 
-/* ---------- render static data ---------- */
-function renderStatic() {
+/* ---------- Celebration ---------- */
+function showCelebration() {
+  if (celebrationShown) return;
+
+  celebrationShown = true;
+  celebration.classList.remove("hidden");
+
+  celebrationTimeout = setTimeout(hideCelebration, 10000);
+}
+
+function hideCelebration() {
+  celebration.classList.add("hidden");
+}
+
+celebration.addEventListener("click", () => {
+  clearTimeout(celebrationTimeout);
+  hideCelebration();
+});
+
+/* ---------- Render ---------- */
+function render() {
   if (!state) return;
 
   const total = num(state.total);
   const target = num(state.target);
 
+  // Points
   pointsTotal.textContent = total.toLocaleString();
   targetPoints.textContent = target.toLocaleString();
 
-  pointsRemaining.textContent = target
-    ? Math.max(0, target - total).toLocaleString()
-    : "—";
+  const remaining = target ? Math.max(0, target - total) : null;
+  pointsRemaining.textContent =
+    remaining !== null ? remaining.toLocaleString() : "—";
 
+  // Progress
   const pct = target ? Math.min(100, (total / target) * 100) : 0;
   bar.style.width = pct + "%";
   progressPct.textContent = `${pct.toFixed(1)}%`;
-}
 
-/* ---------- render timer ---------- */
-function renderTimer() {
-  if (!state) return;
+  // 🎉 Trigger celebration
+  if (target && remaining === 0) {
+    showCelebration();
+  }
 
+  // Time
   const minutes = getDurationMinutes(state);
   if (!minutes) {
     timeRemaining.textContent = "—";
-    timerStatus.textContent = "No duration set";
     return;
   }
 
   if (!state.started_at) {
-    timeRemaining.textContent = formatTimeHMS(minutes * 60000);
-    timerStatus.textContent = "Timer not started";
+    timeRemaining.textContent = formatTimeHM(minutes * 60000);
     return;
   }
 
   const start = new Date(state.started_at).getTime();
-  const remainingMs =
-    minutes * 60000 - (Date.now() - start);
+  const remainingMs = Math.max(
+    0,
+    minutes * 60000 - (Date.now() - start)
+  );
 
-  timeRemaining.textContent = formatTimeHMS(remainingMs);
-  timerStatus.textContent = "Timer running";
+  timeRemaining.textContent = formatTimeHM(remainingMs);
 }
 
-/* ---------- fetch event from DB ---------- */
-async function fetchEvent() {
+/* ---------- Load ---------- */
+async function load() {
   const { data, error } = await supabase
     .from("events")
     .select("*")
     .eq("id", EVENT_ID)
     .single();
 
-  if (!error && data) {
-    state = data;
-    renderStatic();
+  if (error) {
+    alert(error.message);
+    return;
   }
+
+  state = data;
+  render();
 }
 
-/* ---------- initial load ---------- */
-await fetchEvent();
-renderTimer();
+/* ---------- Realtime ---------- */
+supabase
+  .channel("events-display")
+  .on(
+    "postgres_changes",
+    { event: "UPDATE", schema: "public", table: "events" },
+    payload => {
+      state = payload.new;
+      render();
+    }
+  )
+  .subscribe();
 
-/* ---------- polling + ticking ---------- */
-setInterval(fetchEvent, 5000);   // re-sync with DB
-setInterval(renderTimer, 1000);  // smooth countdown
-
+await load();
+setInterval(render, 1000);
 </script>
 
 </body>
