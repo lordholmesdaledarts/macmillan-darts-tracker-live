@@ -17,6 +17,7 @@
 
     <!-- TOP ROW -->
     <div class="admin-top">
+
       <!-- Score entry -->
       <section class="card">
         <div class="label">Score entry</div>
@@ -27,23 +28,18 @@
           <button class="warn" id="undoBtn">Undo</button>
         </div>
 
-<div class="quick-row">
-  <!-- Common darts scores -->
-  <button class="chip" data-add="60">+60</button>
-  <button class="chip" data-add="100">+100</button>
-  <button class="chip" data-add="140">+140</button>
-  <button class="chip" data-add="180">+180</button>
-
-  <!-- Leg / game finishes -->
-  <button class="chip" data-add="301">+301</button>
-  <button class="chip" data-add="501">+501</button>
-
-  <!-- Marathon quick adds -->
-  <button class="chip" data-add="1000">+1000</button>
-  <button class="chip" data-add="969">+969</button>
-  <button class="chip" data-add="981">+981</button>
-  <button class="chip" data-add="961">+961</button>
-</div>
+        <div class="quick-row">
+          <button class="chip" data-add="60">+60</button>
+          <button class="chip" data-add="100">+100</button>
+          <button class="chip" data-add="140">+140</button>
+          <button class="chip" data-add="180">+180</button>
+          <button class="chip" data-add="301">+301</button>
+          <button class="chip" data-add="501">+501</button>
+          <button class="chip" data-add="1000">+1000</button>
+          <button class="chip" data-add="969">+969</button>
+          <button class="chip" data-add="961">+961</button>
+          <button class="chip" data-add="981">+981</button>
+        </div>
 
         <p class="subtle" style="margin-top:0.9rem">
           Tip: type a number → Add. Undo reverses the last added amount.
@@ -58,6 +54,7 @@
           Live value used on the display screen.
         </p>
       </section>
+
     </div>
 
     <!-- EVENT SETUP -->
@@ -66,7 +63,7 @@
 
       <div class="settings-grid">
 
-        <!-- Target & duration -->
+        <!-- Targets -->
         <section class="card">
           <div class="label">Event targets</div>
 
@@ -93,24 +90,6 @@
             <button id="pauseTimer">Pause</button>
             <button id="resetTimer">Reset</button>
           </div>
-
-          <p class="subtle" style="margin-top:0.6rem">
-            Controls the event countdown.
-          </p>
-        </section>
-
-        <!-- Amount raised -->
-        <section class="card">
-          <div class="label">Amount raised (£)</div>
-
-          <div class="entry-wide">
-            <input id="amountInput" type="number" inputmode="numeric" placeholder="e.g. 7500" />
-            <button class="primary" id="saveAmount">Update</button>
-          </div>
-
-          <p class="subtle" style="margin-top:0.6rem">
-            Shows on the display immediately.
-          </p>
         </section>
 
         <!-- Reset points -->
@@ -119,10 +98,6 @@
           <button class="warn full" id="resetPointsBtn">
             Reset total points
           </button>
-
-          <p class="subtle" style="margin-top:0.6rem">
-            Resets total back to 0 (timer unchanged).
-          </p>
         </section>
 
       </div>
@@ -131,19 +106,16 @@
   </div>
 
 <script type="module">
-import { supabase, EVENT_ID } from "./supabase.js";
-
-/* 🔍 DEBUG: confirm which event Admin is writing to */
-console.log("ADMIN EVENT_ID:", EVENT_ID);
+import { supabase } from "./supabase.js";
 
 let state = null;
 
-/* ---------- Load ---------- */
+/* ---------- LOAD SINGLE EVENT ---------- */
 async function load() {
   const { data, error } = await supabase
     .from("events")
     .select("*")
-    .eq("id", EVENT_ID)
+    .limit(1)
     .single();
 
   if (error) {
@@ -152,30 +124,47 @@ async function load() {
   }
 
   state = data;
+  syncUI();
+}
+
+/* ---------- UPDATE EVENT ---------- */
+async function updateEvent(patch) {
+  if (!state?.id) {
+    alert("Event not loaded yet");
+    return;
+  }
+
+  const { data, error } = await supabase
+    .from("events")
+    .update(patch)
+    .eq("id", state.id)
+    .select();
+
+  if (error) {
+    alert(error.message);
+    return;
+  }
+
+  if (!data || data.length === 0) {
+    alert("Update failed: no row matched");
+    return;
+  }
+
+  state = data[0];
+  syncUI();
+}
+
+/* ---------- UI SYNC ---------- */
+function syncUI() {
   total.textContent = Number(state.total || 0).toLocaleString();
-  amountInput.value = state.amount_raised ?? "";
   targetInput.value = state.target ?? "";
   hoursInput.value = state.duration_hours ?? "";
 }
 
-/* ---------- Helpers ---------- */
-async function updateEvent(patch) {
-  const { error } = await supabase
-    .from("events")
-    .update(patch)
-    .eq("id", EVENT_ID);
-
-  if (error) {
-    alert(error.message);
-    throw error;
-  }
-}
-
-/* ---------- Scoring ---------- */
+/* ---------- SCORING ---------- */
 async function add(delta) {
-  if (!state) return;
   await updateEvent({
-    total: Math.max(0, state.total + delta),
+    total: Math.max(0, (state.total || 0) + delta),
     last_delta: delta
   });
   manual.value = "";
@@ -192,25 +181,14 @@ async function undo() {
   });
 }
 
-/* ---------- Event controls ---------- */
+/* ---------- CONTROLS ---------- */
 async function saveTargets() {
-  const rawTarget = targetInput.value || "0";
-  const rawHours = hoursInput.value || "0";
-
-  // ✅ Strip commas before Number()
-  const target = Number(rawTarget.replace(/,/g, ""));
-  const hours = Number(rawHours.replace(/,/g, ""));
-
-  if (!Number.isFinite(target) || !Number.isFinite(hours)) {
-    alert("Please enter valid numbers (no letters).");
-    return;
-  }
+  const hours = Number(hoursInput.value || 0);
 
   await updateEvent({
-    target,
+    target: Number(targetInput.value || 0),
     duration_hours: hours,
-    duration_minutes: hours * 60,
-    started_at: null
+    duration_minutes: hours * 60
   });
 }
 
@@ -225,7 +203,7 @@ async function pauseTimer() {
 }
 
 async function resetTimerHandler() {
-  if (!confirm("Reset the timer back to the full duration?")) return;
+  if (!confirm("Reset timer?")) return;
   await updateEvent({ started_at: null });
 }
 
@@ -234,12 +212,7 @@ async function resetPoints() {
   await updateEvent({ total: 0, last_delta: 0 });
 }
 
-async function saveAmount() {
-  const value = Number(amountInput.value || 0);
-  await updateEvent({ amount_raised: value });
-}
-
-/* ---------- Wiring ---------- */
+/* ---------- EVENTS ---------- */
 document.querySelectorAll("[data-add]").forEach(b =>
   b.addEventListener("click", () => add(Number(b.dataset.add)))
 );
@@ -255,22 +228,8 @@ startTimer.onclick = startTimer;
 pauseTimer.onclick = pauseTimer;
 resetTimer.onclick = resetTimerHandler;
 resetPointsBtn.onclick = resetPoints;
-saveAmount.onclick = saveAmount;
 
-/* ---------- Realtime sync ---------- */
-supabase
-  .channel("events-admin")
-  .on(
-    "postgres_changes",
-    { event: "UPDATE", schema: "public", table: "events" },
-    p => {
-      state = p.new;
-      total.textContent = Number(state.total || 0).toLocaleString();
-      amountInput.value = state.amount_raised ?? "";
-    }
-  )
-  .subscribe();
-
+/* ---------- INIT ---------- */
 load();
 </script>
 
