@@ -355,3 +355,43 @@ body.display .amount.big {
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.06);
   pointer-events: none;
 }
+/* =========================================================
+   TV / MIRRORING RESPONSIVENESS FIX
+   ========================================================= */
+
+/* Prevent time from stacking awkwardly */
+#timeRemaining {
+  white-space: nowrap;
+}
+
+/* When height is constrained (phone mirroring / TVs) */
+@media (max-height: 720px) {
+
+  body.display .hero-value {
+    font-size: 5.2rem; /* down from 6.5rem */
+  }
+
+  body.display .hero-card {
+    padding: 2.2rem;
+  }
+
+  body.display .hero-card .subtle {
+    margin-top: 0.5rem;
+  }
+
+  body.display .display-grid {
+    gap: 2rem;
+  }
+}
+
+/* Even tighter environments (older TVs, AirPlay quirks) */
+@media (max-height: 600px) {
+
+  body.display .hero-value {
+    font-size: 4.6rem;
+  }
+
+  body.display .hero-card {
+    padding: 1.8rem;
+  }
+}
