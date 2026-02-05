@@ -17,6 +17,7 @@
 
     <!-- TOP ROW -->
     <div class="admin-top">
+
       <!-- Score entry -->
       <section class="card">
         <div class="label">Score entry</div>
@@ -39,14 +40,21 @@
           <button class="chip" data-add="961">+961</button>
           <button class="chip" data-add="981">+981</button>
         </div>
+
+        <p class="subtle" style="margin-top:0.9rem">
+          Tip: type a number → Add. Undo reverses the last added amount.
+        </p>
       </section>
 
-      <!-- Total -->
+      <!-- Total points -->
       <section class="card">
         <div class="label">Total points</div>
         <div class="hero-value mono" id="total">0</div>
-        <p class="subtle">Live value used on the display</p>
+        <p class="subtle" style="margin-top:0.75rem">
+          Live value used on the display screen.
+        </p>
       </section>
+
     </div>
 
     <!-- EVENT SETUP -->
@@ -59,14 +67,18 @@
         <section class="card">
           <div class="label">Event targets</div>
 
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem">
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem; margin-top:0.5rem">
             <input id="targetInput" type="number" placeholder="Target points" />
             <input id="hoursInput" type="number" placeholder="Hours" />
           </div>
 
-          <button class="primary full" id="saveTargets" style="margin-top:1rem">
+          <button class="primary full" id="saveTargets" style="margin-top:0.9rem">
             Save targets
           </button>
+
+          <p class="subtle" style="margin-top:0.6rem">
+            Used for progress and countdown.
+          </p>
         </section>
 
         <!-- Timer -->
@@ -76,7 +88,12 @@
           <div style="display:flex; gap:0.6rem; margin-top:0.75rem">
             <button class="primary" id="startTimer">Start</button>
             <button id="pauseTimer">Pause</button>
+            <button id="resetTimer">Reset</button>
           </div>
+
+          <p class="subtle" style="margin-top:0.6rem">
+            Controls the event countdown.
+          </p>
         </section>
 
       </div>
@@ -87,12 +104,12 @@
 <script type="module">
 import { supabase, EVENT_ID } from "./supabase.js";
 
+console.log("🟢 Admin loaded for event:", EVENT_ID);
+
 let state = null;
 
-/* ---------------- LOAD EVENT ---------------- */
+/* ---------- Load ---------- */
 async function load() {
-  console.log("Loading event", EVENT_ID);
-
   const { data, error } = await supabase
     .from("events")
     .select("*")
@@ -105,21 +122,14 @@ async function load() {
   }
 
   state = data;
-  syncUI();
-}
-
-/* ---------------- UI SYNC ---------------- */
-function syncUI() {
-  if (!state) return;
-
   total.textContent = Number(state.total || 0).toLocaleString();
   targetInput.value = state.target ?? "";
   hoursInput.value = state.duration_hours ?? "";
 }
 
-/* ---------------- UPDATE EVENT ---------------- */
+/* ---------- DB update ---------- */
 async function updateEvent(patch) {
-  console.log("updateEvent →", patch);
+  console.log("⬆️ Updating event:", patch);
 
   const { data, error } = await supabase
     .from("events")
@@ -127,39 +137,27 @@ async function updateEvent(patch) {
     .eq("id", EVENT_ID)
     .select();
 
-  console.log("Supabase response:", data, error);
-
   if (error) {
+    console.error("❌ Update failed:", error);
     alert(error.message);
     return;
   }
 
-  if (!data || data.length === 0) {
-    alert("Update failed – no row updated");
-    return;
-  }
-
-  state = data[0];
-  syncUI();
+  console.log("✅ Update success:", data);
 }
 
-/* ---------------- SCORING ---------------- */
+/* ---------- Scoring ---------- */
 async function add(delta) {
   if (!state) return;
 
   await updateEvent({
-    total: Number(state.total || 0) + delta,
+    total: (state.total || 0) + delta,
     last_delta: delta
   });
-
-  manual.value = "";
 }
 
 async function undo() {
-  if (!state?.last_delta) {
-    alert("Nothing to undo");
-    return;
-  }
+  if (!state?.last_delta) return alert("Nothing to undo.");
 
   await updateEvent({
     total: Math.max(0, state.total - state.last_delta),
@@ -167,10 +165,12 @@ async function undo() {
   });
 }
 
-/* ---------------- TARGETS ---------------- */
-async function saveTargets() {
+/* ---------- Targets ---------- */
+async function saveTargetsHandler() {
   const target = Number(targetInput.value || 0);
   const hours = Number(hoursInput.value || 0);
+
+  console.log("🎯 Save targets clicked", { target, hours });
 
   await updateEvent({
     target,
@@ -180,42 +180,51 @@ async function saveTargets() {
   });
 }
 
-/* ---------------- TIMER ---------------- */
-async function startTimer() {
+/* ---------- Timer ---------- */
+async function startTimerHandler() {
+  console.log("⏱ Start timer clicked");
+
   await updateEvent({
     started_at: new Date().toISOString()
   });
 }
 
-async function pauseTimer() {
+async function pauseTimerHandler() {
   await updateEvent({ started_at: null });
 }
 
-/* ---------------- WIRING ---------------- */
+async function resetTimerHandler() {
+  if (!confirm("Reset timer back to full duration?")) return;
+  await updateEvent({ started_at: null });
+}
+
+/* ---------- Wiring (IMPORTANT) ---------- */
 document.querySelectorAll("[data-add]").forEach(b =>
   b.addEventListener("click", () => add(Number(b.dataset.add)))
 );
 
-addManual.onclick = () => {
+addManual.addEventListener("click", () => {
   const v = Number(manual.value || 0);
   if (v) add(v);
-};
+});
 
-undoBtn.onclick = undo;
-saveTargets.onclick = saveTargets;
-startTimer.onclick = startTimer;
-pauseTimer.onclick = pauseTimer;
+undoBtn.addEventListener("click", undo);
+saveTargets.addEventListener("click", saveTargetsHandler);
+startTimer.addEventListener("click", startTimerHandler);
+pauseTimer.addEventListener("click", pauseTimerHandler);
+resetTimer.addEventListener("click", resetTimerHandler);
 
-/* ---------------- REALTIME ---------------- */
+/* ---------- Realtime sync ---------- */
 supabase
-  .channel("admin-events")
+  .channel("events-admin")
   .on(
     "postgres_changes",
     { event: "UPDATE", schema: "public", table: "events" },
     payload => {
-      console.log("Realtime update", payload.new);
       state = payload.new;
-      syncUI();
+      total.textContent = Number(state.total || 0).toLocaleString();
+      targetInput.value = state.target ?? "";
+      hoursInput.value = state.duration_hours ?? "";
     }
   )
   .subscribe();
