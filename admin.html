@@ -15,13 +15,20 @@
       <p class="sub">Admin control</p>
     </header>
 
+    <!-- TOP ROW -->
     <div class="admin-top">
 
+      <!-- SCORE ENTRY -->
       <section class="card">
         <div class="label">Score entry</div>
 
         <div class="entry-wide">
-          <input id="manual" type="number" placeholder="Score" />
+          <input
+            id="manual"
+            type="number"
+            placeholder="Score"
+            inputmode="numeric"
+          />
           <button class="primary" id="addManual">Add</button>
           <button class="warn" id="undoBtn">Undo</button>
         </div>
@@ -33,9 +40,18 @@
           <button class="chip" data-add="180">+180</button>
           <button class="chip" data-add="301">+301</button>
           <button class="chip" data-add="501">+501</button>
+          <button class="chip" data-add="1000">+1000</button>
+          <button class="chip" data-add="969">+969</button>
+          <button class="chip" data-add="961">+961</button>
+          <button class="chip" data-add="981">+981</button>
         </div>
+
+        <p class="subtle" style="margin-top:.75rem">
+          Manual input clears automatically after Add
+        </p>
       </section>
 
+      <!-- TOTAL POINTS -->
       <section class="card">
         <div class="label">Total points</div>
         <div class="hero-value mono" id="total">0</div>
@@ -43,11 +59,13 @@
 
     </div>
 
+    <!-- EVENT SETUP -->
     <details class="admin-settings" open>
       <summary>Event setup</summary>
 
       <div class="settings-grid">
 
+        <!-- TARGETS -->
         <section class="card">
           <div class="label">Event targets (hard reset)</div>
 
@@ -59,8 +77,13 @@
           <button class="primary full" id="saveTargets" style="margin-top:.9rem">
             Save targets & start new event
           </button>
+
+          <p class="subtle" style="margin-top:.6rem">
+            This resets score and timer
+          </p>
         </section>
 
+        <!-- TIMER -->
         <section class="card">
           <div class="label">Timer</div>
 
@@ -84,6 +107,7 @@ import { supabase, EVENT_ID } from "./supabase.js";
 
 let state = null;
 
+/* ---------- LOAD ---------- */
 async function load() {
   const { data, error } = await supabase
     .from("events")
@@ -100,6 +124,7 @@ async function load() {
   syncUI();
 }
 
+/* ---------- UI SYNC ---------- */
 function syncUI() {
   total.textContent = Number(state.total || 0).toLocaleString();
   targetInput.value = state.target ?? "";
@@ -116,6 +141,7 @@ function syncUI() {
   }
 }
 
+/* ---------- UPDATE WRAPPER ---------- */
 async function updateEvent(patch) {
   const { data, error } = await supabase
     .from("events")
@@ -128,11 +154,11 @@ async function updateEvent(patch) {
     return;
   }
 
-  // 🔑 THIS IS THE FIX
   state = data[0];
   syncUI();
 }
 
+/* ---------- ACTIONS ---------- */
 async function saveTargetsHandler() {
   const target = Number(targetInput.value);
   const hours = Number(hoursInput.value);
@@ -167,19 +193,28 @@ async function add(delta) {
 }
 
 async function undo() {
+  if (!state.last_delta) return;
   await updateEvent({
     total: Math.max(0, state.total - state.last_delta),
     last_delta: 0
   });
 }
 
+/* ---------- WIRING ---------- */
 document.querySelectorAll("[data-add]").forEach(btn =>
   btn.addEventListener("click", () => add(Number(btn.dataset.add)))
 );
 
-addManual.addEventListener("click", () => {
+/* 🔒 SAFE MANUAL ADD (CLEARS INPUT) */
+addManual.addEventListener("click", async () => {
   const v = Number(manual.value);
-  if (v) add(v);
+  if (!v) return;
+
+  await add(v);
+
+  // ✅ CRITICAL SAFETY FIX
+  manual.value = "";
+  manual.blur();
 });
 
 undoBtn.addEventListener("click", undo);
