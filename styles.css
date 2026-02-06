@@ -297,3 +297,13 @@ button:active {
     font-size: 2.1rem;
   }
 }
+/* ===== Fire TV / Silk hard override ===== */
+@media (min-width: 900px) {
+  body.display .primary-grid {
+    grid-template-columns: 1fr 1fr !important;
+  }
+
+  body.display .secondary-grid {
+    grid-template-columns: 1fr 1fr !important;
+  }
+}
